@@ -1,0 +1,14 @@
+[project]
+name = "deep-agents-quick"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "deepagents>=0.6.1",
+    "langchain-anthropic>=0.3.0",
+    "langchain-ollama>=0.3.0",
+    "langgraph>=0.4.0",
+    "python-dotenv>=1.0.0",
+    "tavily-python>=0.7.24",
+]
