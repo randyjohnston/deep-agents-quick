@@ -2,11 +2,11 @@ import os
 
 from dotenv import load_dotenv
 
+load_dotenv(override=True)
+
 import profiles  # registers anthropic and ollama provider profiles
 from deepagents import create_deep_agent
 from tools import internet_search
-
-load_dotenv()
 
 
 INSTRUCTIONS = """You are an expert researcher. Your job is to conduct thorough research and then write a polished report.
