@@ -37,3 +37,6 @@ Set `MODEL` in `.env` to switch providers:
 | `ANTHROPIC_API_KEY` | For Anthropic | |
 | `TAVILY_API_KEY` | Always | Used by `internet_search` |
 | `MODEL` | No | Defaults to `anthropic:claude-sonnet-4-6` |
+| `LANGCHAIN_TRACING_V2` | No | Set to `true` to enable LangSmith tracing |
+| `LANGCHAIN_API_KEY` | For tracing | LangSmith API key |
+| `LANGCHAIN_PROJECT` | No | LangSmith project name; defaults to `deep-agents-quick` |
