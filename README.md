@@ -7,7 +7,7 @@ A research agent built on [Deep Agents](https://docs.langchain.com/oss/python/de
 ```bash
 uv sync
 cp .env.example .env  # then fill in your keys
-uv run python main.py
+uv run python agent.py
 ```
 
 ## Environment variables
@@ -39,4 +39,4 @@ Ollama must be running locally (`ollama serve`) with the model pulled:
 ollama pull qwen3:27b
 ```
 
-To add a new provider, register a `ProviderProfile` in `profiles.py` and set `MODEL=<provider>:<model>`.
+To add a new provider, register a `ProviderProfile` in `app/profiles.py` and set `MODEL=<provider>:<model>`.

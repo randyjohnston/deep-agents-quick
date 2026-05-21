@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 uv sync                        # install / update dependencies
-uv run python main.py          # run the agent directly
+uv run python agent.py         # run the agent directly
 uv run langgraph dev           # start LangGraph Studio dev server
 ```
 
@@ -16,11 +16,8 @@ This is a [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) appli
 
 **Module responsibilities:**
 
-- `profiles.py` — registers `ProviderProfile` entries for `anthropic` and `ollama` at import time; must be imported before `create_deep_agent` is called
-- `agent.py` — imports `profiles`, creates the agent via `create_deep_agent`, exports it as `agent`; model is selected via the `MODEL` env var (default `anthropic:claude-sonnet-4-6`)
-- `tools.py` — defines `internet_search` using Tavily; client is instantiated lazily inside the function so `TAVILY_API_KEY` is read after `load_dotenv()` runs
-- `main.py` — calls `load_dotenv()` then invokes `agent`; the only entry point that triggers `.env` loading
-- `langgraph.json` — points the LangGraph dev server at `agent.py:graph`
+- `agent.py` — registers provider profiles, defines `internet_search`, creates the agent, and (when run directly) invokes it; model is selected via the `MODEL` env var (default `anthropic:claude-sonnet-4-6`)
+- `langgraph.json` — points the LangGraph dev server at `agent.py:agent`
 
 **Provider switching:**
 
