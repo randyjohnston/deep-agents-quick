@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync                        # install / update dependencies
 uv run python agent.py         # run the agent directly
 uv run langgraph dev           # start LangGraph Studio dev server
+langgraph deploy --name deep-agents-quick   # deploy to LangSmith Deployments
 ```
 
 ## Architecture
