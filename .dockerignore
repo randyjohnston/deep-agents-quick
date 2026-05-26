@@ -1,0 +1,30 @@
+# Secrets — never bake into image
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+credentials.json
+token.json
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+wheels/
+.venv/
+.python-version
+
+# LangGraph dev server state
+.langgraph_api/
+
+# Editor / OS
+.DS_Store
+.claude/
