@@ -41,6 +41,59 @@ ollama pull qwen3:27b
 
 To add a new provider, register a `ProviderProfile` in `app/profiles.py` and set `MODEL=<provider>:<model>`.
 
+## Guardrails
+
+Three independent middleware layers sit on the `guardrails` branch. Each can be enabled or disabled without affecting the others.
+
+### 1. Threat detection — Cisco AI Defense (optional)
+
+Covers prompt injection, jailbreaks, PII leakage, and unsafe operations on all LLM I/O and tool calls.
+
+```bash
+uv sync --extra cisco
+```
+
+Set in `.env`:
+```
+CISCO_AI_DEFENSE_API_KEY=your-key
+CISCO_AI_DEFENSE_REGION=us-west-2   # or eu-central-1, ap-northeast-1
+```
+
+The middleware starts in `mode="monitor"` (log-only). Switch to `mode="enforce"` in `app/agent.py` when ready to block.
+
+### 2. PII redaction
+
+Built into `langchain.agents.middleware` — no extra packages. Three instances cover the most common types:
+
+| PII type | Strategy |
+|---|---|
+| `email` | redact |
+| `credit_card` | redact |
+| `ip` | redact |
+
+Add more `PIIMiddleware(...)` instances in `agent.py` for `mac_address` or `url`.
+
+### 3. Policy content moderation
+
+An LLM judge runs once after the agent completes (`after_agent`) and checks the final response against the policy documents in `policies/`:
+
+- `policies/legal.md` — legal content guidelines
+- `policies/marketing.md` — marketing content guidelines
+
+Drop additional `<name>.md` files in `policies/` to extend coverage. The judge model defaults to `MODEL` but can be overridden with `POLICY_JUDGE_MODEL` in `.env`.
+
+Currently set to `block_on_violation=False` (log-only) while policies are being calibrated. Switch to `True` in `app/agent.py` to enforce.
+
+Smoke-test the layer with: `uv run python scripts/test_guardrails.py`
+
+### Guardrails environment variables
+
+| Variable | Used by | Notes |
+|---|---|---|
+| `CISCO_AI_DEFENSE_API_KEY` | Cisco AI Defense | Required to enable live scanning |
+| `CISCO_AI_DEFENSE_REGION` | Cisco AI Defense | Defaults to `us-west-2` |
+| `POLICY_JUDGE_MODEL` | Policy moderation | Overrides `MODEL` for the judge call |
+
 ## Deploy to LangSmith
 
 This repo includes a `langgraph.json` and `Dockerfile` ready for [LangSmith Deployments](https://docs.smith.langchain.com/self_hosting).

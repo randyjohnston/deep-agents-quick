@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv sync                        # install / update dependencies
 uv run python agent.py         # run the agent directly
 uv run langgraph dev           # start LangGraph Studio dev server
+uv run python scripts/push_context.py       # publish system prompt to LangSmith Context Hub
 langgraph deploy --name deep-agents-quick   # deploy to LangSmith Deployments
 ```
 
@@ -19,6 +20,11 @@ This is a [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) appli
 
 - `agent.py` — registers provider profiles, defines `internet_search`, creates the agent, and (when run directly) invokes it; model is selected via the `MODEL` env var (default `anthropic:claude-sonnet-4-6`)
 - `langgraph.json` — points the LangGraph dev server at `agent.py:agent`
+- `scripts/push_context.py` — pushes the inline `FALLBACK_INSTRUCTIONS` to the LangSmith Context Hub agent named `deep-agents-quick-researcher`
+
+**System prompt loading:**
+
+At import time, `agent.py` calls `Client().pull_agent(LANGSMITH_CONTEXT_REF or "deep-agents-quick-researcher")` and uses `AGENTS.md` as the system prompt. If the pull fails (no key, offline, missing repo), it falls back to the inline `FALLBACK_INSTRUCTIONS` string and logs a warning — local dev keeps working without LangSmith. Pin to a tag in deployment via `LANGSMITH_CONTEXT_REF=deep-agents-quick-researcher:production`.
 
 **Provider switching:**
 
@@ -38,3 +44,5 @@ Set `MODEL` in `.env` to switch providers:
 | `LANGCHAIN_TRACING_V2` | No | Set to `true` to enable LangSmith tracing |
 | `LANGCHAIN_API_KEY` | For tracing | LangSmith API key |
 | `LANGCHAIN_PROJECT` | No | LangSmith project name; defaults to `deep-agents-quick` |
+| `LANGSMITH_API_KEY` | For Context Hub | Required to pull/push agent contexts |
+| `LANGSMITH_CONTEXT_REF` | No | Context Hub ref (e.g. `deep-agents-quick-researcher:production`); defaults to `deep-agents-quick-researcher` |

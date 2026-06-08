@@ -1,3 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
 [project]
 name = "deep-agents-quick"
 version = "0.1.0"
@@ -8,9 +15,14 @@ dependencies = [
     "deepagents>=0.6.1",
     "langchain-anthropic>=0.3.0",
     "langchain-ollama>=0.3.0",
+    "langsmith>=0.7.35",
     "python-dotenv>=1.0.0",
     "tavily-python>=0.7.24",
 ]
+
+[project.optional-dependencies]
+# uv sync --extra cisco
+cisco = ["langchain-cisco-aidefense>=0.1.0"]
 
 [dependency-groups]
 dev = [
