@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -11,38 +12,40 @@ from app.tools.office.pptx import Deck, read_pptx, write_pptx
 from app.tools.office.xlsx import Sheet, read_xlsx, write_xlsx
 
 
-FORMAT_CASES = [
-    pytest.param(
-        lambda name: write_xlsx(name, [Sheet(name="S", rows=[["x"]])]),
-        read_xlsx,
-        ".xlsx",
-        id="xlsx",
-    ),
-    pytest.param(
-        lambda name: write_docx(name, Document(title="T")),
-        read_docx,
-        ".docx",
-        id="docx",
-    ),
-    pytest.param(
-        lambda name: write_pptx(name, Deck(title="T")),
-        read_pptx,
-        ".pptx",
-        id="pptx",
-    ),
+def _write_xlsx(name):
+    return write_xlsx(name, [Sheet(name="S", rows=[["x"]])])
+
+
+def _write_docx(name):
+    return write_docx(name, Document(title="T"))
+
+
+def _write_pptx(name):
+    return write_pptx(name, Deck(title="T"))
+
+
+WRITER_CASES = [
+    pytest.param(_write_xlsx, ".xlsx", id="xlsx"),
+    pytest.param(_write_docx, ".docx", id="docx"),
+    pytest.param(_write_pptx, ".pptx", id="pptx"),
+]
+READER_CASES = [
+    pytest.param(read_xlsx, ".xlsx", id="xlsx"),
+    pytest.param(read_docx, ".docx", id="docx"),
+    pytest.param(read_pptx, ".pptx", id="pptx"),
 ]
 
 
-@pytest.mark.parametrize("writer,reader,extension", FORMAT_CASES)
-def test_writers_add_extension_and_reject_escape(_isolate_dirs, writer, reader, extension):
+@pytest.mark.parametrize("writer,extension", WRITER_CASES)
+def test_writers_add_extension_and_reject_escape(_isolate_dirs, writer, extension):
     writer("safe")
     assert (_isolate_dirs / "out" / f"safe{extension}").is_file()
     with pytest.raises(ValueError, match="directories"):
         writer(f"../escape{extension}")
 
 
-@pytest.mark.parametrize("writer,reader,extension", FORMAT_CASES)
-def test_readers_refuse_paths_outside_roots(_isolate_dirs, writer, reader, extension):
+@pytest.mark.parametrize("reader,extension", READER_CASES)
+def test_readers_refuse_paths_outside_roots(_isolate_dirs, reader, extension):
     outside = _isolate_dirs / f"outside{extension}"
     outside.write_bytes(b"not opened")
     with pytest.raises(FileNotFoundError):
@@ -86,3 +89,51 @@ def test_reader_normalizes_corrupt_member_error(_isolate_dirs):
 
     with pytest.raises(ValueError, match="Not a valid Office Open XML"):
         read_docx("corrupt.docx")
+
+
+@pytest.mark.parametrize("reader,extension", READER_CASES)
+def test_readers_normalize_missing_office_parts(_isolate_dirs, reader, extension):
+    plain_zip = _isolate_dirs / "in" / f"plain{extension}"
+    with ZipFile(plain_zip, "w") as archive:
+        archive.writestr("ordinary.txt", "not an Office package")
+
+    with pytest.raises(ValueError, match="Not a valid Office Open XML"):
+        reader(plain_zip.name)
+
+
+@pytest.mark.parametrize(
+    "writer,reader,extension,member",
+    [
+        pytest.param(
+            _write_xlsx, read_xlsx, ".xlsx", "xl/workbook.xml", id="xlsx"
+        ),
+        pytest.param(
+            _write_docx, read_docx, ".docx", "word/document.xml", id="docx"
+        ),
+        pytest.param(
+            _write_pptx,
+            read_pptx,
+            ".pptx",
+            "ppt/presentation.xml",
+            id="pptx",
+        ),
+    ],
+)
+def test_readers_normalize_malformed_xml(_isolate_dirs, writer, reader, extension, member):
+    writer("malformed")
+    path = _isolate_dirs / "out" / f"malformed{extension}"
+    _replace_member(path, member, b"<not valid XML")
+
+    with pytest.raises(ValueError, match="Not a valid Office Open XML"):
+        reader(path.name)
+
+
+def _replace_member(path, target: str, replacement: bytes) -> None:
+    buffer = BytesIO()
+    with ZipFile(path) as source, ZipFile(buffer, "w") as destination:
+        for member in source.infolist():
+            destination.writestr(
+                member,
+                replacement if member.filename == target else source.read(member),
+            )
+    path.write_bytes(buffer.getvalue())

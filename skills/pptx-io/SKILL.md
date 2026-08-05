@@ -16,3 +16,5 @@ narrative and XLSX for tabular analysis. Give each slide one idea, use short
 titles that state the takeaway, and keep bullets brief enough to scan while
 speaking. Reads and writes are confined to `OFFICE_INPUT_DIR` and
 `OFFICE_OUTPUT_DIR`; report the absolute output path returned by the tool.
+`read_pptx` returns visible slide text, including tables and grouped shapes;
+speaker notes are not returned.

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from app.tools.office import OFFICE_TOOLS, Sheet
+from app.tools.office import OFFICE_TOOLS
 from app.tools.search import internet_search
 
 TOOLS: list[Callable] = [
@@ -17,4 +17,4 @@ TOOLS: list[Callable] = [
     *OFFICE_TOOLS,
 ]
 
-__all__ = ["TOOLS", "Sheet", "internet_search"]
+__all__ = ["TOOLS", "internet_search"]

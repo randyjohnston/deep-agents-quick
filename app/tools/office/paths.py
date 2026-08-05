@@ -5,8 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 from typing import TypeVar
+from xml.etree.ElementTree import ParseError
 from zlib import error as ZlibError
 from zipfile import BadZipFile, ZipFile
+
+from lxml.etree import XMLSyntaxError
 
 from app.config import office_input_dirs, office_output_dir
 
@@ -89,5 +92,5 @@ def load_office_file(path: Path, loader: Callable[[Path], T]) -> T:
     """Normalize corrupt-member failures raised after the initial ZIP check."""
     try:
         return loader(path)
-    except (BadZipFile, ZlibError) as exc:
+    except (BadZipFile, ZlibError, KeyError, ParseError, XMLSyntaxError) as exc:
         raise ValueError(f"Not a valid Office Open XML file: {path.name!r}") from exc
