@@ -10,14 +10,6 @@ from openpyxl import load_workbook
 from app.tools.xlsx import Sheet, read_xlsx, write_xlsx
 
 
-@pytest.fixture(autouse=True)
-def _isolate_dirs(tmp_path, monkeypatch):
-    monkeypatch.setenv("XLSX_OUTPUT_DIR", str(tmp_path / "out"))
-    monkeypatch.setenv("XLSX_INPUT_DIR", str(tmp_path / "in"))
-    (tmp_path / "in").mkdir()
-    return tmp_path
-
-
 def _written(tmp_path, name="book.xlsx"):
     return tmp_path / "out" / name
 
@@ -111,9 +103,8 @@ def test_ragged_rows_do_not_lose_columns(_isolate_dirs):
 
 
 def test_write_refuses_to_escape_the_output_root(_isolate_dirs):
-    write_xlsx("../escaped.xlsx", [Sheet(name="S", rows=[["x"]])])
-    # The basename is kept, so the file lands inside the root, not above it.
-    assert _written(_isolate_dirs, "escaped.xlsx").is_file()
+    with pytest.raises(ValueError, match="directories"):
+        write_xlsx("../escaped.xlsx", [Sheet(name="S", rows=[["x"]])])
     assert not (_isolate_dirs / "escaped.xlsx").exists()
 
 
@@ -161,7 +152,7 @@ def test_read_truncates_at_max_rows(_isolate_dirs):
 
 
 def test_read_reports_missing_file(_isolate_dirs):
-    with pytest.raises(FileNotFoundError, match="No workbook found"):
+    with pytest.raises(FileNotFoundError, match="No Office file found"):
         read_xlsx("absent.xlsx")
 
 

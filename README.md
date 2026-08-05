@@ -1,6 +1,6 @@
 # Deep Agents Quick Start
 
-A research agent built on [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) (LangGraph) that searches the web and writes polished reports. Supports Anthropic and Ollama providers via profile-based configuration.
+A research agent built on [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) (LangGraph) that searches the web and writes polished reports. It can generate and inspect XLSX, DOCX, and PPTX files and supports Anthropic and Ollama providers via profile-based configuration.
 
 ## Setup
 
@@ -19,6 +19,8 @@ Copy `.env.example` to `.env` and set the following:
 | `ANTHROPIC_API_KEY` | For Anthropic | Your Anthropic API key |
 | `TAVILY_API_KEY` | Always | Web search API key ([tavily.com](https://tavily.com)) |
 | `MODEL` | No | Model string — see below |
+| `OFFICE_INPUT_DIR` | No | Permitted root for Office files to inspect (default `./input`) |
+| `OFFICE_OUTPUT_DIR` | No | Destination for generated Office files (default `./output`) |
 
 ## Switching model providers
 

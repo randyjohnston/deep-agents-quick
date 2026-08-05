@@ -20,6 +20,7 @@ build/
 dist/
 wheels/
 .venv/
+node_modules/
 .python-version
 
 # LangGraph dev server state

@@ -9,13 +9,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from app.tools.office import OFFICE_TOOLS, Sheet
 from app.tools.search import internet_search
-from app.tools.xlsx import Sheet, read_xlsx, write_xlsx
 
 TOOLS: list[Callable] = [
     internet_search,
-    write_xlsx,
-    read_xlsx,
+    *OFFICE_TOOLS,
 ]
 
-__all__ = ["TOOLS", "Sheet", "internet_search", "read_xlsx", "write_xlsx"]
+__all__ = ["TOOLS", "Sheet", "internet_search"]

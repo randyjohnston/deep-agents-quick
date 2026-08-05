@@ -31,14 +31,20 @@ def ollama_base_url() -> str:
     return os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 
-def xlsx_output_dir() -> Path:
-    """Where write_xlsx saves. Read at call time so tests can monkeypatch it."""
-    return Path(os.getenv("XLSX_OUTPUT_DIR", "output")).expanduser().resolve()
+def office_output_dir() -> Path:
+    """Where Office writers save, with the old XLSX setting as a fallback."""
+    value = os.getenv("OFFICE_OUTPUT_DIR") or os.getenv("XLSX_OUTPUT_DIR", "output")
+    return Path(value).expanduser().resolve()
 
 
-def xlsx_input_dirs() -> list[Path]:
-    """Roots read_xlsx may read from: the input dir, plus anything we wrote."""
-    roots = [Path(os.getenv("XLSX_INPUT_DIR", "input")).expanduser().resolve()]
-    if (out := xlsx_output_dir()) not in roots:
+def office_input_dirs() -> list[Path]:
+    """Roots Office readers may use, including the shared output directory."""
+    value = os.getenv("OFFICE_INPUT_DIR") or os.getenv("XLSX_INPUT_DIR", "input")
+    roots = [Path(value).expanduser().resolve()]
+    if (out := office_output_dir()) not in roots:
         roots.append(out)
     return roots
+
+
+xlsx_output_dir = office_output_dir
+xlsx_input_dirs = office_input_dirs
