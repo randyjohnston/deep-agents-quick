@@ -25,6 +25,11 @@ wheels/
 # LangGraph dev server state
 .langgraph_api/
 
+# Tests and agent working dirs are not needed in the image
+tests/
+output/
+input/
+
 # Editor / OS
 .DS_Store
 .claude/

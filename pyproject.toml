@@ -20,7 +20,17 @@ dev = [
     "pytest>=9.1.1",
 ]
 
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Declared explicitly so setuptools does not have to guess: auto-discovery would
+# also pick up skills/ and tests/, and a wrong guess fails the Docker
+# `uv pip install -e .`.
+packages = ["app", "app.tools"]
+
 [tool.pytest.ini_options]
-# Modules live at the repo root (agent.py, xlsx.py), not in a src/ package.
+# agent.py sits at the repo root; the rest is the `app` package beside it.
 pythonpath = ["."]
 testpaths = ["tests"]

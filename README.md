@@ -7,7 +7,7 @@ A research agent built on [Deep Agents](https://docs.langchain.com/oss/python/de
 ```bash
 uv sync
 cp .env.example .env  # then fill in your keys
-uv run python agent.py
+uv run python -m app.agent
 ```
 
 ## Environment variables

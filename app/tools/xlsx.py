@@ -13,7 +13,6 @@ to XLSX_OUTPUT_DIR only.
 
 from __future__ import annotations
 
-import os
 import re
 from datetime import date, datetime, time
 from pathlib import Path
@@ -22,6 +21,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
+
+from app.config import xlsx_input_dirs, xlsx_output_dir
 
 CellValue = bool | int | float | str | None
 
@@ -56,18 +57,6 @@ class Sheet(BaseModel):
     )
 
 
-def _output_root() -> Path:
-    return Path(os.getenv("XLSX_OUTPUT_DIR", "output")).expanduser().resolve()
-
-
-def _input_roots() -> list[Path]:
-    """Reads are allowed from the input dir and from anything we wrote."""
-    roots = [Path(os.getenv("XLSX_INPUT_DIR", "input")).expanduser().resolve()]
-    if (out := _output_root()) not in roots:
-        roots.append(out)
-    return roots
-
-
 def _resolve_write_path(filename: str) -> Path:
     """Confine writes to the output root and guarantee an .xlsx extension."""
     # Basename only, so "../../etc/passwd" cannot escape the root.
@@ -77,7 +66,7 @@ def _resolve_write_path(filename: str) -> Path:
     if not name.lower().endswith((".xlsx", ".xlsm")):
         name = f"{name}.xlsx"
 
-    root = _output_root()
+    root = xlsx_output_dir()
     path = (root / name).resolve()
     if not path.is_relative_to(root):
         raise ValueError(f"Refusing to write outside {root}: {filename!r}")
@@ -86,7 +75,7 @@ def _resolve_write_path(filename: str) -> Path:
 
 def _resolve_read_path(path_or_name: str) -> Path:
     """Find a readable workbook inside one of the permitted roots."""
-    roots = _input_roots()
+    roots = xlsx_input_dirs()
     candidate = Path(path_or_name).expanduser()
 
     tried: list[Path] = []
