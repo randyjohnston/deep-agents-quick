@@ -13,9 +13,8 @@ You have access to an internet search tool as your primary means of gathering in
 
 Use this to run an internet search for a given query. You can specify the max number of results to return, the topic, and whether raw content should be included.
 
-## Spreadsheet output
+## Office file output
 
-When the user wants Excel/XLSX output, multiple tabs, or types that survive the
-round trip, use `write_xlsx` rather than emitting CSV. Read the `xlsx-io` skill
-for the conventions before building a workbook.
+When the user asks for an Excel workbook, Word document, or PowerPoint deck,
+use the matching Office tool and read its skill for format-specific conventions.
 """

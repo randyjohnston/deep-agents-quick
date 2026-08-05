@@ -10,7 +10,9 @@ dependencies = [
     "langchain-anthropic>=1.5.3",
     "langchain-ollama>=1.1.0",
     "openpyxl>=3.1.5",
+    "python-docx>=1.2.0,<2",
     "python-dotenv>=1.2.2",
+    "python-pptx>=1.0.2,<2",
     "tavily-python>=0.7.27",
 ]
 
@@ -28,7 +30,7 @@ build-backend = "setuptools.build_meta"
 # Declared explicitly so setuptools does not have to guess: auto-discovery would
 # also pick up skills/ and tests/, and a wrong guess fails the Docker
 # `uv pip install -e .`.
-packages = ["app", "app.tools"]
+packages = ["app", "app.tools", "app.tools.office"]
 
 [tool.pytest.ini_options]
 # agent.py sits at the repo root; the rest is the `app` package beside it.

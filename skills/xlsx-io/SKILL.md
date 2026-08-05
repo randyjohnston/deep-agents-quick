@@ -81,14 +81,16 @@ Raise `max_rows` deliberately; each row consumes context.
 
 ## Where files live
 
-- Writes go to `XLSX_OUTPUT_DIR` (default `./output`), basename only — a path
+- Writes go to `OFFICE_OUTPUT_DIR` (default `./output`), basename only — a path
   like `../report.xlsx` is rejected rather than escaping the directory.
-- Reads resolve under `XLSX_INPUT_DIR` (default `./input`) and the output
+- Reads resolve under `OFFICE_INPUT_DIR` (default `./input`) and the output
   directory, so a file just written can be read straight back.
 
 Report the returned absolute path to the user; that is how they retrieve the
 file. On a deployed server the path is container-local and does not survive a
 restart, so mention that when it applies.
+
+The legacy `XLSX_INPUT_DIR` and `XLSX_OUTPUT_DIR` settings remain fallbacks.
 
 ## Limits
 

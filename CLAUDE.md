@@ -26,9 +26,16 @@ app/
   tools/
     __init__.py       # TOOLS registry
     search.py         # internet_search
-    xlsx.py           # write_xlsx / read_xlsx
+    office/
+      __init__.py     # OFFICE_TOOLS registry
+      paths.py        # shared path confinement and OOXML size checks
+      xlsx.py         # write_xlsx / read_xlsx
+      docx.py         # write_docx / read_docx
+      pptx.py         # write_pptx / read_pptx
 skills/
   xlsx-io/SKILL.md
+  docx-io/SKILL.md
+  pptx-io/SKILL.md
 tests/
 ```
 
@@ -37,20 +44,20 @@ tests/
 - `app/agent.py` — `build_agent()` assembles model, tools, skills, middleware, and backend. It is also the graph entrypoint: `langgraph.json` and `Dockerfile`'s `LANGSERVE_GRAPHS` both resolve `app/agent.py:build_agent`. **Change one and you must change the other.** LangGraph accepts a factory, so nothing is constructed at import time.
 - `app/config.py` — all `os.getenv` calls live here; read at call time so tests can monkeypatch
 - `app/tools/__init__.py` — the `TOOLS` list that `build_agent` passes through
-- `app/tools/xlsx.py` — serializes and parses Office Open XML in-process via `openpyxl`
-- `skills/xlsx-io/SKILL.md` — when to choose XLSX over CSV and how to shape sheets
+- `app/tools/office/` — typed Office Open XML tools plus shared filesystem and archive policy
+- `skills/*-io/SKILL.md` — when to choose each Office format and how to shape its content
 
-**Adding a tool:** create a module in `app/tools/`, then add the callable to `TOOLS` in `app/tools/__init__.py`. Nothing else changes — `tests/test_agent.py` asserts every entry in `TOOLS` reaches the compiled graph, so a tool that fails to register fails the suite. Plain functions are fine; deepagents wraps them.
+**Adding a tool:** create a module in `app/tools/`, then add the callable to `TOOLS` in `app/tools/__init__.py`. Office formats instead go in `app/tools/office/` and register through `OFFICE_TOOLS`. `tests/test_agent.py` asserts every entry in `TOOLS` reaches the compiled graph. Plain functions are fine; deepagents wraps them.
 
 **Adding a skill:** create `skills/<name>/SKILL.md` with `name` and `description` frontmatter. No code change — `skills=[SKILLS_PREFIX]` loads the whole directory, and the tests assert each skill directory has a `SKILL.md` that resolves through the backend.
 
-**Packaging:** `pyproject.toml` declares `packages` and `py-modules` explicitly. Do not remove them: with a package directory *and* a root-level module, setuptools flat-layout auto-discovery is ambiguous and the Docker `uv pip install -e .` fails.
+**Packaging:** `pyproject.toml` declares packages explicitly. Keep `app.tools.office` in that list or the Docker editable install silently omits the Office subpackage.
 
-**Spreadsheet I/O:**
+**Office file I/O:**
 
-An `.xlsx` is a ZIP of Office Open XML parts, so it is built in memory — no sandbox and no `execute`. That matters here because the agent's `execute` tool is inert: `StateBackend` does not implement `SandboxBackendProtocol`, so `execute` always returns an error.
+XLSX, DOCX, and PPTX files are ZIPs of Office Open XML parts, so they are built in-process — no sandbox and no `execute`. That matters here because the agent's `execute` tool is inert: `StateBackend` does not implement `SandboxBackendProtocol`, so `execute` always returns an error.
 
-Workbooks cannot live in the agent's virtual filesystem either — `StateBackend` stores files as text and base64-encodes binary, producing an unopenable blob. `app/tools/xlsx.py` therefore writes to the real filesystem under `XLSX_OUTPUT_DIR` and reads from `XLSX_INPUT_DIR` plus the output dir.
+Office files cannot live in the agent's virtual filesystem either — `StateBackend` stores files as text and base64-encodes binary, producing an unopenable blob. `app/tools/office/` therefore writes to the real filesystem under `OFFICE_OUTPUT_DIR` and reads from `OFFICE_INPUT_DIR` plus the output dir. The older `XLSX_*` variables remain fallbacks.
 
 **Skills:**
 
@@ -72,8 +79,10 @@ Set `MODEL` in `.env` to switch providers:
 | `TAVILY_API_KEY` | Always | Used by `internet_search` |
 | `MODEL` | No | Defaults to `anthropic:claude-sonnet-5` |
 | `OLLAMA_BASE_URL` | No | Defaults to `http://localhost:11434` |
-| `XLSX_OUTPUT_DIR` | No | Where `write_xlsx` saves; defaults to `./output` |
-| `XLSX_INPUT_DIR` | No | Where `read_xlsx` looks; defaults to `./input` |
+| `OFFICE_OUTPUT_DIR` | No | Where Office writers save; defaults to `./output` |
+| `OFFICE_INPUT_DIR` | No | Where Office readers look; defaults to `./input` |
+| `XLSX_OUTPUT_DIR` | No | Legacy fallback for `OFFICE_OUTPUT_DIR` |
+| `XLSX_INPUT_DIR` | No | Legacy fallback for `OFFICE_INPUT_DIR` |
 | `LANGCHAIN_TRACING_V2` | No | Set to `true` to enable LangSmith tracing |
 | `LANGCHAIN_API_KEY` | For tracing | LangSmith API key |
 | `LANGCHAIN_PROJECT` | No | LangSmith project name; defaults to `deep-agents-quick` |

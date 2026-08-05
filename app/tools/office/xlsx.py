@@ -7,22 +7,21 @@ this works under `langgraph dev` and in a deployed container alike.
 
 Files live on the real filesystem rather than the agent's virtual StateBackend:
 state files are stored as text, so binary written there is base64-encoded and
-unopenable. Reads are confined to XLSX_INPUT_DIR plus XLSX_OUTPUT_DIR; writes
-to XLSX_OUTPUT_DIR only.
+unopenable. Shared Office path policy confines reads and writes and rejects
+oversized OOXML ZIP packages before openpyxl parses them.
 """
 
 from __future__ import annotations
 
 import re
 from datetime import date, datetime, time
-from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
 
-from app.config import xlsx_input_dirs, xlsx_output_dir
+from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
 
 CellValue = bool | int | float | str | None
 
@@ -55,46 +54,6 @@ class Sheet(BaseModel):
     rows: list[list[CellValue]] = Field(
         default_factory=list, description="Data rows, each a list of cell values"
     )
-
-
-def _resolve_write_path(filename: str) -> Path:
-    """Confine writes to the output root and guarantee an .xlsx extension."""
-    # Basename only, so "../../etc/passwd" cannot escape the root.
-    name = Path(filename).name.strip()
-    if not name or name in {".", ".."}:
-        raise ValueError(f"Invalid filename: {filename!r}")
-    if not name.lower().endswith((".xlsx", ".xlsm")):
-        name = f"{name}.xlsx"
-
-    root = xlsx_output_dir()
-    path = (root / name).resolve()
-    if not path.is_relative_to(root):
-        raise ValueError(f"Refusing to write outside {root}: {filename!r}")
-    return path
-
-
-def _resolve_read_path(path_or_name: str) -> Path:
-    """Find a readable workbook inside one of the permitted roots."""
-    roots = xlsx_input_dirs()
-    candidate = Path(path_or_name).expanduser()
-
-    tried: list[Path] = []
-    if candidate.is_absolute():
-        resolved = candidate.resolve()
-        if any(resolved.is_relative_to(r) for r in roots) and resolved.is_file():
-            return resolved
-        tried.append(resolved)
-    else:
-        for root in roots:
-            resolved = (root / candidate).resolve()
-            if not resolved.is_relative_to(root):
-                continue
-            if resolved.is_file():
-                return resolved
-            tried.append(resolved)
-
-    searched = ", ".join(str(t) for t in tried) or ", ".join(str(r) for r in roots)
-    raise FileNotFoundError(f"No workbook found for {path_or_name!r}. Looked in: {searched}")
 
 
 def _unique_sheet_name(raw: str, taken: set[str]) -> str:
@@ -171,8 +130,8 @@ def write_xlsx(
     widths sized to the content.
 
     Args:
-        filename: Output file name, e.g. "customers.xlsx". Directories are
-            stripped; the file is written under XLSX_OUTPUT_DIR.
+        filename: Output basename, e.g. "customers.xlsx". Directories are
+            rejected; the file is written under OFFICE_OUTPUT_DIR.
         sheets: One entry per worksheet.
         freeze_header: Keep the header row visible while scrolling.
         autofilter: Add filter dropdowns across the header row.
@@ -183,7 +142,7 @@ def write_xlsx(
     if not sheets:
         raise ValueError("Provide at least one sheet.")
 
-    path = _resolve_write_path(filename)
+    path = resolve_write_path(filename, ".xlsx")
     path.parent.mkdir(parents=True, exist_ok=True)
 
     wb = Workbook()
@@ -250,18 +209,20 @@ def read_xlsx(
     Formula cells come back as their last cached value, not the formula.
 
     Args:
-        path: Workbook filename or path, resolved under XLSX_INPUT_DIR or
-            XLSX_OUTPUT_DIR.
+        path: Workbook filename or path, resolved under OFFICE_INPUT_DIR or
+            OFFICE_OUTPUT_DIR.
         sheet: Read only this worksheet; omit to read them all.
         max_rows: Row cap per sheet, so a large workbook cannot flood context.
 
     Returns:
         A pipe-delimited rendering of each sheet, noting any truncation.
     """
-    resolved = _resolve_read_path(path)
+    resolved = resolve_read_path(path, (".xlsx", ".xlsm"))
 
     # data_only surfaces cached formula results instead of "=SUM(...)".
-    wb = load_workbook(resolved, read_only=True, data_only=True)
+    wb = load_office_file(
+        resolved, lambda source: load_workbook(source, read_only=True, data_only=True)
+    )
     try:
         if sheet is not None:
             if sheet not in wb.sheetnames:
