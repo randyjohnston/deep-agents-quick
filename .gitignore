@@ -25,6 +25,10 @@ token.json
 # on every `langgraph dev`; holds conversation + tool-result data)
 .langgraph_api/
 
+# Agent spreadsheet I/O working directories
+output/
+input/
+
 # OS / editor cruft
 .DS_Store
 node_modules/

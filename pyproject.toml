@@ -9,6 +9,7 @@ dependencies = [
     "langchain>=1.3.14",
     "langchain-anthropic>=1.5.3",
     "langchain-ollama>=1.1.0",
+    "openpyxl>=3.1.5",
     "python-dotenv>=1.2.2",
     "tavily-python>=0.7.27",
 ]
@@ -16,4 +17,20 @@ dependencies = [
 [dependency-groups]
 dev = [
     "langgraph-cli[inmem]>=0.4.31",
+    "pytest>=9.1.1",
 ]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Declared explicitly so setuptools does not have to guess: auto-discovery would
+# also pick up skills/ and tests/, and a wrong guess fails the Docker
+# `uv pip install -e .`.
+packages = ["app", "app.tools"]
+
+[tool.pytest.ini_options]
+# agent.py sits at the repo root; the rest is the `app` package beside it.
+pythonpath = ["."]
+testpaths = ["tests"]
