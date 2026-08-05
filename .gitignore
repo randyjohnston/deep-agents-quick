@@ -11,3 +11,20 @@ wheels/
 
 # Environment variables
 .env
+.env.*
+!.env.example
+
+# Credentials — never commit
+*.pem
+*.key
+*.crt
+credentials.json
+token.json
+
+# LangGraph dev server runtime state (checkpoints, ops, store — regenerated
+# on every `langgraph dev`; holds conversation + tool-result data)
+.langgraph_api/
+
+# OS / editor cruft
+.DS_Store
+node_modules/
