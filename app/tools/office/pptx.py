@@ -5,7 +5,7 @@ from __future__ import annotations
 from pptx import Presentation
 from pydantic import BaseModel, Field
 
-from app.tools.office.paths import resolve_read_path, resolve_write_path
+from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
 
 # python-pptx pulls in XlsxWriter for chart workbooks. Spreadsheet generation
 # intentionally remains in xlsx.py with openpyxl so there is one XLSX code path.
@@ -60,15 +60,29 @@ def read_pptx(path: str, max_slides: int = 100) -> str:
     if max_slides < 1:
         raise ValueError("max_slides must be at least 1.")
     resolved = resolve_read_path(path, (".pptx",))
-    presentation = Presentation(resolved)
+    presentation = load_office_file(resolved, Presentation)
     blocks = [f"# {resolved}", ""]
     for index, slide in enumerate(presentation.slides, start=1):
         if index > max_slides:
             break
         blocks.append(f"## Slide {index}")
-        text = [shape.text for shape in slide.shapes if hasattr(shape, "text") and shape.text.strip()]
+        text = [value for shape in slide.shapes for value in _shape_text(shape)]
         blocks.extend(text or ["(empty)"])
         blocks.append("")
     if len(presentation.slides) > max_slides:
         blocks.append(f"... truncated at {max_slides} slides; raise max_slides for more")
     return "\n".join(blocks).rstrip()
+
+
+def _shape_text(shape) -> list[str]:
+    """Return visible text from text frames, tables, and nested shape groups."""
+    if getattr(shape, "has_table", False):
+        return [
+            " | ".join(cell.text for cell in row.cells)
+            for row in shape.table.rows
+            if any(cell.text.strip() for cell in row.cells)
+        ]
+    if hasattr(shape, "shapes"):
+        return [value for child in shape.shapes for value in _shape_text(child)]
+    text = getattr(shape, "text", "")
+    return [text] if text.strip() else []

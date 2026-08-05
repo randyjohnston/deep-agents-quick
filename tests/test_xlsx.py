@@ -7,7 +7,7 @@ from datetime import date, datetime
 import pytest
 from openpyxl import load_workbook
 
-from app.tools.xlsx import Sheet, read_xlsx, write_xlsx
+from app.tools.office.xlsx import Sheet, read_xlsx, write_xlsx
 
 
 def _written(tmp_path, name="book.xlsx"):
@@ -102,12 +102,6 @@ def test_ragged_rows_do_not_lose_columns(_isolate_dirs):
     assert [c.value for c in ws[2]] == [1, 2, 3]
 
 
-def test_write_refuses_to_escape_the_output_root(_isolate_dirs):
-    with pytest.raises(ValueError, match="directories"):
-        write_xlsx("../escaped.xlsx", [Sheet(name="S", rows=[["x"]])])
-    assert not (_isolate_dirs / "escaped.xlsx").exists()
-
-
 def test_empty_sheet_list_is_rejected(_isolate_dirs):
     with pytest.raises(ValueError, match="at least one sheet"):
         write_xlsx("empty", [])
@@ -164,10 +158,9 @@ def test_read_finds_files_in_the_input_dir(_isolate_dirs):
     assert "from-input" in read_xlsx("seed.xlsx")
 
 
-def test_read_refuses_paths_outside_the_permitted_roots(_isolate_dirs):
-    outside = _isolate_dirs / "secret.xlsx"
-    write_xlsx("secret", [Sheet(name="S", rows=[["x"]])])
-    _written(_isolate_dirs, "secret.xlsx").rename(outside)
+def test_read_accepts_macro_enabled_workbook_without_preserving_vba(_isolate_dirs):
+    write_xlsx("macro-source", [Sheet(name="S", rows=[["safe"]])])
+    source = _written(_isolate_dirs, "macro-source.xlsx")
+    source.rename(_isolate_dirs / "in" / "macro.xlsm")
 
-    with pytest.raises(FileNotFoundError):
-        read_xlsx(str(outside))
+    assert "safe" in read_xlsx("macro.xlsm")

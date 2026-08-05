@@ -5,7 +5,7 @@ from __future__ import annotations
 from docx import Document as DocxDocument
 from pydantic import BaseModel, Field
 
-from app.tools.office.paths import resolve_read_path, resolve_write_path
+from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
 
 
 class Section(BaseModel):
@@ -57,7 +57,7 @@ def read_docx(path: str, max_blocks: int = 500) -> str:
     if max_blocks < 1:
         raise ValueError("max_blocks must be at least 1.")
     resolved = resolve_read_path(path, (".docx",))
-    document = DocxDocument(resolved)
+    document = load_office_file(resolved, DocxDocument)
     values = [paragraph.text for paragraph in document.paragraphs if paragraph.text.strip()]
     for table in document.tables:
         values.extend(

@@ -44,7 +44,3 @@ def office_input_dirs() -> list[Path]:
     if (out := office_output_dir()) not in roots:
         roots.append(out)
     return roots
-
-
-xlsx_output_dir = office_output_dir
-xlsx_input_dirs = office_input_dirs

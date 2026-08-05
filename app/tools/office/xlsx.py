@@ -21,7 +21,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
 
-from app.tools.office.paths import resolve_read_path, resolve_write_path
+from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
 
 CellValue = bool | int | float | str | None
 
@@ -217,10 +217,12 @@ def read_xlsx(
     Returns:
         A pipe-delimited rendering of each sheet, noting any truncation.
     """
-    resolved = resolve_read_path(path, (".xlsx",))
+    resolved = resolve_read_path(path, (".xlsx", ".xlsm"))
 
     # data_only surfaces cached formula results instead of "=SUM(...)".
-    wb = load_workbook(resolved, read_only=True, data_only=True)
+    wb = load_office_file(
+        resolved, lambda source: load_workbook(source, read_only=True, data_only=True)
+    )
     try:
         if sheet is not None:
             if sheet not in wb.sheetnames:

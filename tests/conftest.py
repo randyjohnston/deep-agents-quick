@@ -1,3 +1,5 @@
+"""Shared test isolation for all filesystem-backed Office tools."""
+
 from __future__ import annotations
 
 import pytest

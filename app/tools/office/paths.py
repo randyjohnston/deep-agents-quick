@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
+from zlib import error as ZlibError
 from zipfile import BadZipFile, ZipFile
 
 from app.config import office_input_dirs, office_output_dir
@@ -10,6 +13,7 @@ from app.config import office_input_dirs, office_output_dir
 MAX_ARCHIVE_BYTES = 50 * 1024 * 1024
 MAX_EXPANDED_BYTES = 200 * 1024 * 1024
 _MACRO_EXTENSIONS = {".docm", ".pptm", ".xlsm"}
+T = TypeVar("T")
 
 
 def resolve_write_path(filename: str, extension: str) -> Path:
@@ -20,7 +24,7 @@ def resolve_write_path(filename: str, extension: str) -> Path:
         raise ValueError(f"Invalid filename: {filename!r}")
     if name != raw or "/" in raw or "\\" in raw:
         raise ValueError(f"Refusing a filename with directories: {filename!r}")
-    if Path(name).suffix.lower() in _MACRO_EXTENSIONS:
+    if name.lower().endswith(tuple(_MACRO_EXTENSIONS)):
         raise ValueError(f"Macro-enabled Office output is not supported: {filename!r}")
     if not name.lower().endswith(extension):
         name = f"{name}{extension}"
@@ -72,10 +76,18 @@ def validate_archive_size(path: Path) -> None:
     try:
         with ZipFile(path) as archive:
             expanded = sum(member.file_size for member in archive.infolist())
-    except BadZipFile as exc:
+    except (BadZipFile, ZlibError) as exc:
         raise ValueError(f"Not a valid Office Open XML file: {path.name!r}") from exc
     if expanded > MAX_EXPANDED_BYTES:
         raise ValueError(
             f"Refusing {path.name!r}: expanded archive is {expanded} bytes; "
             f"limit is {MAX_EXPANDED_BYTES}."
         )
+
+
+def load_office_file(path: Path, loader: Callable[[Path], T]) -> T:
+    """Normalize corrupt-member failures raised after the initial ZIP check."""
+    try:
+        return loader(path)
+    except (BadZipFile, ZlibError) as exc:
+        raise ValueError(f"Not a valid Office Open XML file: {path.name!r}") from exc

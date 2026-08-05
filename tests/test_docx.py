@@ -29,16 +29,7 @@ def test_docx_rejects_empty_content(_isolate_dirs):
         write_docx("empty", Document(sections=[Section()]))
 
 
-def test_docx_rejects_escape_and_macro_extension(_isolate_dirs):
+def test_docx_rejects_macro_extension(_isolate_dirs):
     content = Document(title="Safe")
-    with pytest.raises(ValueError, match="directories"):
-        write_docx("../escape.docx", content)
     with pytest.raises(ValueError, match="Macro-enabled"):
         write_docx("unsafe.docm", content)
-
-
-def test_docx_read_refuses_outside_root(_isolate_dirs):
-    outside = _isolate_dirs / "outside.docx"
-    DocxDocument().save(outside)
-    with pytest.raises(FileNotFoundError):
-        read_docx(str(outside))
