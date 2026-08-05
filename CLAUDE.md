@@ -13,7 +13,7 @@ langgraph deploy --name deep-agents-quick   # deploy to LangSmith Deployments
 
 ## Architecture
 
-This is a [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) application — an opinionated LangGraph-based agent harness with built-in middleware for task planning, filesystem context, and subagent delegation.
+This is a [Deep Agents](https://docs.langchain.com/oss/python/deepagents/) application — an opinionated LangGraph-based agent harness with built-in middleware for filesystem context and subagent delegation. As of `deepagents` 0.7.0 task planning is *not* a default: `agent.py` passes `middleware=[TodoListMiddleware()]` explicitly to keep the `write_todos` tool.
 
 **Module responsibilities:**
 

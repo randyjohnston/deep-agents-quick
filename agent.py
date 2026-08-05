@@ -4,6 +4,7 @@ from typing import Literal
 from dotenv import load_dotenv
 from tavily import TavilyClient
 from deepagents import ProviderProfile, create_deep_agent, register_provider_profile
+from langchain.agents.middleware import TodoListMiddleware
 
 load_dotenv(override=True)
 
@@ -41,9 +42,12 @@ Use this to run an internet search for a given query. You can specify the max nu
 """
 
 agent = create_deep_agent(
-    model=os.getenv("MODEL", "anthropic:claude-sonnet-4-6"),
+    model=os.getenv("MODEL", "anthropic:claude-sonnet-5"),
     tools=[internet_search],
     system_prompt=INSTRUCTIONS,
+    # deepagents 0.7.0 dropped TodoListMiddleware from the defaults; pass it
+    # explicitly to keep the write_todos planning tool.
+    middleware=[TodoListMiddleware()],
 )
 
 if __name__ == "__main__":
