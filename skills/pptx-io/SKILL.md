@@ -24,6 +24,16 @@ The writer owns every coordinate; never invent coordinate or raw-OOXML fields.
 Stay within schema budgets because server-side font metrics are unavailable.
 Cover/card images are confined PNG/JPEG paths under `OFFICE_INPUT_DIR`, cropped
 to fill without distortion, and degrade to a deliberate solid panel when absent.
+To use remote images, call `internet_search(..., include_images=True)` to discover
+candidates, call `fetch_images` with up to 12 selected HTTPS URLs, then pass each
+returned `image` path into the archetype. The fetcher rejects redirects
+and non-public network peers, streams into a fixed byte ceiling, downsizes and
+normalizes to JPEG, and returns `source_url` for provenance. Treat that source
+as a citation and use images only when their licensing permits reuse.
+Each URL returns independently: use entries containing `image` and inspect
+entries containing `error` rather than retrying the entire batch.
+`OFFICE_IMAGE_DOMAINS` optionally narrows eligible hostnames; when it is unset,
+any public HTTPS hostname is eligible.
 
 `write_pptx` also accepts `theme={"name": "acme"}` or bounded inline colors,
 fonts, six-role PPTX palette, bounded type scale (including statement size),

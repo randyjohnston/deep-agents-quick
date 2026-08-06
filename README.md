@@ -22,6 +22,7 @@ Copy `.env.example` to `.env` and set the following:
 | `OFFICE_INPUT_DIR` | No | Permitted root for Office files to inspect (default `./input`) |
 | `OFFICE_OUTPUT_DIR` | No | Destination for generated Office files (default `./output`) |
 | `OFFICE_THEME_DIR` | No | Named JSON/TOML themes (default `./themes`) |
+| `OFFICE_IMAGE_DOMAINS` | No | Optional hostname allowlist for remote Office images |
 
 ## Office themes and templates
 
@@ -55,6 +56,15 @@ cards, image cards, and statement slides. New decks default to 16:9, while a
 supplied POTX/PPTX retains its own canvas. Archetype copy has schema-enforced
 character budgets; optional images are guarded and aspect-filled, with a solid
 panel fallback when absent. Legacy title-and-bullet slides remain supported.
+
+The standalone `fetch_images` tool ingests public HTTPS images before PPTX
+generation. It rejects redirects and non-public network peers, caps downloads
+while streaming, downsizes and converts images to JPEG, and caches them by
+content hash under `OFFICE_INPUT_DIR/.office-images`. Results retain the source
+URL for provenance and provide an `image` path accepted by PPTX archetypes.
+Failures are returned per URL so valid images survive a mixed-quality batch.
+With `OFFICE_IMAGE_DOMAINS` unset, any public HTTPS hostname is eligible; set it
+to comma-separated domains to constrain sources for licensing or policy.
 
 ## Switching model providers
 

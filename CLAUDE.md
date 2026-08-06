@@ -91,6 +91,7 @@ Set `MODEL` in `.env` to switch providers:
 | `OFFICE_OUTPUT_DIR` | No | Where Office writers save; defaults to `./output` |
 | `OFFICE_INPUT_DIR` | No | Where Office readers look; defaults to `./input` |
 | `OFFICE_THEME_DIR` | No | Where named JSON/TOML themes live; defaults to `./themes` |
+| `OFFICE_IMAGE_DOMAINS` | No | Optional hostname allowlist for `fetch_images` |
 | `XLSX_OUTPUT_DIR` | No | Legacy fallback for `OFFICE_OUTPUT_DIR` |
 | `XLSX_INPUT_DIR` | No | Legacy fallback for `OFFICE_INPUT_DIR` |
 | `LANGCHAIN_TRACING_V2` | No | Set to `true` to enable LangSmith tracing |

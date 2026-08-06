@@ -31,11 +31,13 @@ def internet_search(
     max_results: int = 5,
     topic: Literal["general", "news", "finance"] = "general",
     include_raw_content: bool = False,
+    include_images: bool = False,
 ):
     """Run a web search"""
     return _client().search(
         query,
         max_results=max_results,
         include_raw_content=include_raw_content,
+        include_images=include_images,
         topic=topic,
     )

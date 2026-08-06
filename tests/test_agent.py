@@ -80,3 +80,19 @@ def test_search_tool_import_does_not_require_an_api_key(monkeypatch):
     with pytest.raises(RuntimeError, match="TAVILY_API_KEY is not set"):
         _client()
     _client.cache_clear()
+
+
+def test_search_can_request_image_candidates(monkeypatch):
+    from app.tools import search
+
+    calls = []
+
+    class Client:
+        def search(self, query, **kwargs):
+            calls.append((query, kwargs))
+            return {"images": ["https://images.example/photo.jpg"]}
+
+    monkeypatch.setattr(search, "_client", lambda: Client())
+    result = search.internet_search("press photo", include_images=True)
+    assert result["images"]
+    assert calls[0][1]["include_images"] is True

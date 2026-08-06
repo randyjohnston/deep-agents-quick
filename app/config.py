@@ -49,3 +49,11 @@ def office_input_dirs() -> list[Path]:
 def office_theme_dir() -> Path:
     """Directory containing named JSON or TOML Office themes."""
     return Path(os.getenv("OFFICE_THEME_DIR", "themes")).expanduser().resolve()
+
+
+def office_image_domains() -> frozenset[str]:
+    """Optional comma-separated hostname boundary for remote Office images."""
+    value = os.getenv("OFFICE_IMAGE_DOMAINS", "")
+    return frozenset(
+        part.strip().casefold().rstrip(".") for part in value.split(",") if part.strip()
+    )
