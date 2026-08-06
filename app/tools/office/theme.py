@@ -44,6 +44,7 @@ class Theme(BaseModel):
     rule_color: str | None = Field(default=None, description="PPTX hairline and divider color")
     cover_title_size: int | None = Field(default=None, ge=40, le=72)
     stat_size: int | None = Field(default=None, ge=28, le=48)
+    statement_size: int | None = Field(default=None, ge=32, le=56)
     headline_size: int | None = Field(default=None, ge=18, le=30)
     deck_size: int | None = Field(default=None, ge=12, le=20)
     body_size: int | None = Field(default=None, ge=10, le=18)
@@ -84,6 +85,7 @@ class ResolvedTheme(BaseModel):
     rule_color: str | None = None
     cover_title_size: int | None = None
     stat_size: int | None = None
+    statement_size: int | None = None
     headline_size: int | None = None
     deck_size: int | None = None
     body_size: int | None = None

@@ -92,7 +92,13 @@ def test_designed_archetypes_render_wide_without_images(_isolate_dirs):
     assert not any(
         shape.shape_type == 13 for slide in presentation.slides for shape in slide.shapes
     )
+    assert not any(
+        shape.is_placeholder for slide in presentation.slides for shape in slide.shapes
+    )
     assert "Built for what is next" in read_pptx("designed.pptx")
+
+    sedan = next(shape for shape in presentation.slides[2].shapes if shape.text == "Sedan")
+    assert sedan.top < Inches(3)
 
 
 def test_image_cards_crop_to_fill_and_notes_round_trip(_isolate_dirs):
@@ -123,3 +129,34 @@ def test_archetype_text_budgets_are_schema_enforced():
 
     parsed = Deck.model_validate({"slides": [{"kind": "cover", "title": "Typed"}]})
     assert isinstance(parsed.slides[0], CoverSlide)
+
+
+def test_designed_page_numbers_follow_rendered_slide_positions(_isolate_dirs):
+    write_pptx(
+        "pages",
+        Deck(
+            title="Legacy title",
+            slides=[
+                CoverSlide(kind="cover", title="Cover"),
+                StatsSlide(
+                    kind="stats", headline="Stats",
+                    stats=[Stat(value="A", label="One"), Stat(value="B", label="Two")],
+                ),
+                CardsSlide(
+                    kind="cards", headline="Cards",
+                    cards=[Card(title="A", body="One"), Card(title="B", body="Two")],
+                ),
+                StatementSlide(kind="statement", statement="Close"),
+            ],
+        ),
+    )
+    presentation = Presentation(_isolate_dirs / "out" / "pages.pptx")
+
+    assert [_page_number(slide, presentation.slide_width) for slide in presentation.slides] == [
+        None, None, "3", "4", "5"
+    ]
+
+
+def _page_number(slide, width):
+    values = [shape.text for shape in slide.shapes if shape.left >= int(width * .9)]
+    return values[-1] if values else None

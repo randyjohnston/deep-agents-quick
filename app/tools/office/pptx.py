@@ -136,6 +136,7 @@ class _Design:
         self.body_font = (theme.body_font if theme else None) or "Aptos"
         self.cover_size = (theme.cover_title_size if theme else None) or 61
         self.stat_size = (theme.stat_size if theme else None) or 35
+        self.statement_size = (theme.statement_size if theme else None) or 42
         self.headline_size = (theme.headline_size if theme else None) or 21
         self.deck_size = (theme.deck_size if theme else None) or 15
         self.body_size = (theme.body_size if theme else None) or 13
@@ -167,15 +168,15 @@ def write_pptx(
     design = _Design(branding)
     if deck.title or deck.subtitle:
         _render_legacy_title(presentation, deck.title, deck.subtitle, branding)
-    for index, item in enumerate(deck.slides, start=1):
+    for item in deck.slides:
         if isinstance(item, Slide):
             _render_bullets(presentation, item, branding)
         elif isinstance(item, CoverSlide):
             _render_cover(presentation, item, design, branding)
         elif isinstance(item, StatsSlide):
-            _render_stats(presentation, item, design, branding, index)
+            _render_stats(presentation, item, design, branding)
         elif isinstance(item, CardsSlide):
-            _render_cards(presentation, item, design, branding, index)
+            _render_cards(presentation, item, design, branding)
         else:
             _render_statement(presentation, item, design, branding)
     presentation.save(path)
@@ -213,26 +214,29 @@ def _render_cover(presentation, item, design, theme) -> None:
         _add_fill_image(slide, resolve_image_path(item.image), 0, 0, width, height)
     else:
         _rect(slide, 0, 0, width, height, design.surface)
-    panel_width = grid.x(.58)
+    panel_width = grid.cover_panel_width
     _rect(slide, 0, 0, panel_width, height, design.ink)
-    left, content_width = grid.x(.055), int(panel_width * .82)
-    _text(slide, item.kicker, left, grid.y(.10), content_width, Inches(.3),
+    left, content_width = grid.cover_left, int(panel_width * .82)
+    _text(slide, item.kicker, left, grid.cover_kicker_y, content_width, Inches(.3),
           design.small_size, design.accent, design.body_font, bold=True)
-    _text(slide, item.title, left, grid.y(.23), content_width, Inches(2.2),
+    _text(slide, item.title, left, grid.cover_title_y, content_width, Inches(2.2),
           design.cover_size, design.on_accent, design.heading_font, bold=True)
-    _text(slide, item.subtitle, left, grid.y(.61), content_width, Inches(.9),
+    _text(slide, item.subtitle, left, grid.cover_subtitle_y, content_width, Inches(.9),
           design.deck_size, design.on_accent, design.body_font)
-    _text(slide, item.meta, left, grid.y(.84), content_width, Inches(.35),
+    _text(slide, item.meta, left, grid.cover_meta_y, content_width, Inches(.35),
           design.small_size, design.rule, design.body_font)
     _add_logo(slide, presentation, theme)
     _notes(slide, item.notes)
 
 
-def _render_stats(presentation, item, design, theme, page) -> None:
+def _render_stats(presentation, item, design, theme) -> None:
     slide = _blank_slide(presentation)
-    _chrome(slide, presentation, item.kicker, item.headline, item.deck, item.source, page, design)
     grid = Grid(presentation.slide_width, presentation.slide_height)
-    top, card_height = grid.y(.27), grid.y(.50)
+    _chrome(
+        slide, presentation, item.kicker, item.headline, item.deck, item.source,
+        len(presentation.slides), design,
+    )
+    top, card_height = grid.content_top, grid.content_height
     for stat, (left, card_width) in zip(item.stats, grid.columns(len(item.stats)), strict=True):
         _rect(slide, left, top, card_width, card_height, design.surface)
         _rect(slide, left, top, Inches(.07), card_height, design.accent)
@@ -246,36 +250,39 @@ def _render_stats(presentation, item, design, theme, page) -> None:
     _notes(slide, item.notes)
 
 
-def _render_cards(presentation, item, design, theme, page) -> None:
+def _render_cards(presentation, item, design, theme) -> None:
     slide = _blank_slide(presentation)
-    _chrome(slide, presentation, item.kicker, item.headline, item.deck, item.source, page, design)
     grid = Grid(presentation.slide_width, presentation.slide_height)
-    top, image_height = grid.y(.25), grid.y(.29)
+    _chrome(
+        slide, presentation, item.kicker, item.headline, item.deck, item.source,
+        len(presentation.slides), design,
+    )
+    top, image_height = grid.content_top, grid.image_height
     for card, (left, card_width) in zip(item.cards, grid.columns(len(item.cards)), strict=True):
         _rect(slide, left, top, card_width, grid.y(.53), design.surface)
         if card.image:
             _add_fill_image(
                 slide, resolve_image_path(card.image), left, top, card_width, image_height
             )
-        else:
-            _rect(slide, left, top, card_width, image_height, design.surface)
-            _rect(
-                slide, left, top + image_height - Inches(.07), card_width,
-                Inches(.07), design.accent,
-            )
         pad = Inches(.18)
+        text_top = top + image_height + Inches(.15) if card.image else top + Inches(.32)
+        if not card.image:
+            _rect(slide, left, top, card_width, Inches(.07), design.accent)
         _text(
-            slide, card.title, left + pad, top + image_height + Inches(.15),
+            slide, card.title, left + pad, text_top,
             card_width - 2 * pad, Inches(.45), design.deck_size, design.ink,
             design.heading_font, bold=True,
         )
         _text(
-            slide, card.metric, left + pad, top + image_height + Inches(.63),
+            slide, card.metric, left + pad, text_top + Inches(.48),
             card_width - 2 * pad, Inches(.34), design.small_size, design.accent,
             design.body_font, bold=True,
         )
-        _text(slide, card.body, left + pad, top + image_height + Inches(1.02), card_width - 2 * pad,
-              Inches(.82), design.body_size, design.muted, design.body_font)
+        body_height = Inches(1.65) if not card.image else Inches(.82)
+        _text(
+            slide, card.body, left + pad, text_top + Inches(.87), card_width - 2 * pad,
+            body_height, design.body_size, design.muted, design.body_font,
+        )
     _add_logo(slide, presentation, theme)
     _notes(slide, item.notes)
 
@@ -285,13 +292,24 @@ def _render_statement(presentation, item, design, theme) -> None:
     grid = Grid(presentation.slide_width, presentation.slide_height)
     width, height = grid.width, grid.height
     _rect(slide, 0, 0, width, height, design.ink)
-    _rect(slide, grid.x(.055), grid.y(.18), Inches(.08), grid.y(.52), design.accent)
-    _text(slide, item.kicker, grid.x(.085), grid.y(.17), grid.x(.75), Inches(.35),
+    _rect(
+        slide, grid.cover_left, grid.statement_rule_y, Inches(.08),
+        grid.content_height, design.accent,
+    )
+    _text(slide, item.kicker, grid.statement_left, grid.statement_kicker_y,
+          grid.x(.75), Inches(.35),
           design.small_size, design.accent, design.body_font, bold=True)
-    _text(slide, item.statement, grid.x(.085), grid.y(.29), grid.x(.76), Inches(2.5),
-          42, design.on_accent, design.heading_font, bold=True)
-    _text(slide, item.attribution, grid.x(.085), grid.y(.76), grid.x(.70), Inches(.4),
+    _text(slide, item.statement, grid.statement_left, grid.statement_text_y,
+          grid.x(.76), Inches(2.5),
+          design.statement_size, design.on_accent, design.heading_font, bold=True)
+    _text(slide, item.attribution, grid.statement_left, grid.statement_attribution_y,
+          grid.x(.70), Inches(.4),
           design.body_size, design.rule, design.body_font)
+    _text(
+        slide, str(len(presentation.slides)), grid.x(.92), grid.footer_text_y,
+        grid.x(.04), Inches(.22), design.fine_size, design.rule, design.body_font,
+        align=PP_ALIGN.RIGHT,
+    )
     _add_logo(slide, presentation, theme)
     _notes(slide, item.notes)
 
@@ -299,17 +317,17 @@ def _render_statement(presentation, item, design, theme) -> None:
 def _chrome(slide, presentation, kicker, headline, deck, source, page, design) -> None:
     grid = Grid(presentation.slide_width, presentation.slide_height)
     width, height, margin = grid.width, grid.height, grid.margin
-    _text(slide, kicker, margin, grid.y(.035), grid.x(.75), Inches(.25),
+    _text(slide, kicker, margin, grid.chrome_kicker_y, grid.x(.75), Inches(.25),
           design.small_size, design.accent, design.body_font, bold=True)
-    _text(slide, headline, margin, grid.y(.075), grid.x(.80), Inches(.55),
+    _text(slide, headline, margin, grid.chrome_headline_y, grid.x(.80), Inches(.55),
           design.headline_size, design.ink, design.heading_font, bold=True)
-    _text(slide, deck, margin, grid.y(.15), grid.x(.82), Inches(.4),
+    _text(slide, deck, margin, grid.chrome_deck_y, grid.x(.82), Inches(.4),
           design.deck_size, design.muted, design.body_font)
-    _rect(slide, margin, grid.y(.205), width - 2 * margin, max(1, Inches(.01)), design.rule)
-    _rect(slide, margin, grid.y(.908), width - 2 * margin, max(1, Inches(.01)), design.rule)
-    _text(slide, source, margin, grid.y(.92), grid.x(.75), Inches(.22),
+    _rect(slide, margin, grid.chrome_rule_y, width - 2 * margin, Inches(.01), design.rule)
+    _rect(slide, margin, grid.footer_rule_y, width - 2 * margin, Inches(.01), design.rule)
+    _text(slide, source, margin, grid.footer_text_y, grid.x(.75), Inches(.22),
           design.fine_size, design.muted, design.body_font)
-    _text(slide, str(page), grid.x(.92), grid.y(.92), grid.x(.04), Inches(.22),
+    _text(slide, str(page), grid.x(.92), grid.footer_text_y, grid.x(.04), Inches(.22),
           design.fine_size, design.muted, design.body_font, align=PP_ALIGN.RIGHT)
 
 

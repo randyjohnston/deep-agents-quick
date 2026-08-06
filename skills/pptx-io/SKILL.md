@@ -1,6 +1,8 @@
 ---
 name: pptx-io
-description: Create and inspect Microsoft PowerPoint .pptx presentations. Use for slide-based briefings, pitches, and presentations.
+description: >
+  Create and inspect Microsoft PowerPoint .pptx presentations. Use for
+  slide-based briefings, pitches, and presentations.
 license: MIT
 ---
 
@@ -12,8 +14,10 @@ markdown. Simple slides still accept `title` plus concise `bullets`. For a
 designed 16:9 deck, select one bounded archetype per slide:
 
 - `cover`: title (70 chars), subtitle (160), kicker (50), meta (80), optional image and notes.
-- `stats`: headline (75), optional deck (160), and 2-4 stats with value (18), label (45), caption (120).
-- `cards`: headline (75), optional deck (160), and 2-4 cards with title (48), metric (45), body (120), and optional image.
+- `stats`: headline (75), optional deck (160), and 2-4 stats with value (18),
+  label (45), caption (120).
+- `cards`: headline (75), optional deck (160), and 2-4 cards with title (48),
+  metric (45), body (120), and optional image.
 - `statement`: statement (140), optional kicker (50), attribution (90), and notes.
 
 The writer owns every coordinate; never invent coordinate or raw-OOXML fields.
@@ -22,8 +26,8 @@ Cover/card images are confined PNG/JPEG paths under `OFFICE_INPUT_DIR`, cropped
 to fill without distortion, and degrade to a deliberate solid panel when absent.
 
 `write_pptx` also accepts `theme={"name": "acme"}` or bounded inline colors,
-fonts, six-role PPTX palette, type scale, and a logo. Pass
-`template="acme.potx"` to inherit an organization's
+fonts, six-role PPTX palette, bounded type scale (including statement size),
+and a logo. Pass `template="acme.potx"` to inherit an organization's
 real slide masters and layouts. Themes resolve under `OFFICE_THEME_DIR`;
 logos and templates must be under `OFFICE_INPUT_DIR`.
 
