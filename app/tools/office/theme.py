@@ -35,6 +35,21 @@ class Theme(BaseModel):
     logo: str | None = Field(
         default=None, min_length=1, max_length=255, description="PNG/JPEG under OFFICE_INPUT_DIR"
     )
+    ink_color: str | None = Field(default=None, description="Primary PPTX text/panel color")
+    muted_color: str | None = Field(default=None, description="Secondary PPTX text color")
+    surface_color: str | None = Field(default=None, description="PPTX card surface color")
+    on_accent_color: str | None = Field(
+        default=None, description="Text color on dark/accent panels"
+    )
+    rule_color: str | None = Field(default=None, description="PPTX hairline and divider color")
+    cover_title_size: int | None = Field(default=None, ge=40, le=72)
+    stat_size: int | None = Field(default=None, ge=28, le=48)
+    statement_size: int | None = Field(default=None, ge=32, le=56)
+    headline_size: int | None = Field(default=None, ge=18, le=30)
+    deck_size: int | None = Field(default=None, ge=12, le=20)
+    body_size: int | None = Field(default=None, ge=10, le=18)
+    small_size: int | None = Field(default=None, ge=7, le=12)
+    fine_size: int | None = Field(default=None, ge=6, le=10)
 
     @field_validator("name")
     @classmethod
@@ -43,7 +58,10 @@ class Theme(BaseModel):
             raise ValueError("theme name must contain only letters, digits, '-' and '_'")
         return value
 
-    @field_validator("accent_color", "header_background", "header_foreground")
+    @field_validator(
+        "accent_color", "header_background", "header_foreground", "ink_color",
+        "muted_color", "surface_color", "on_accent_color", "rule_color",
+    )
     @classmethod
     def _valid_color(cls, value: str | None) -> str | None:
         if value is not None and not _HEX_COLOR.fullmatch(value):
@@ -60,6 +78,19 @@ class ResolvedTheme(BaseModel):
     heading_font: str | None = None
     body_font: str | None = None
     logo: Path | None = None
+    ink_color: str | None = None
+    muted_color: str | None = None
+    surface_color: str | None = None
+    on_accent_color: str | None = None
+    rule_color: str | None = None
+    cover_title_size: int | None = None
+    stat_size: int | None = None
+    statement_size: int | None = None
+    headline_size: int | None = None
+    deck_size: int | None = None
+    body_size: int | None = None
+    small_size: int | None = None
+    fine_size: int | None = None
 
 
 def resolve_theme(theme: Theme | None) -> ResolvedTheme | None:
