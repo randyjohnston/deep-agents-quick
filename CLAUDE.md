@@ -62,6 +62,12 @@ Office files cannot live in the agent's virtual filesystem either — `StateBack
 
 Each writer accepts a bounded `Theme` plus a guarded native template (`.xltx`, `.dotx`, or `.potx`). Named JSON/TOML themes resolve under `OFFICE_THEME_DIR`; logos and templates remain confined to Office input roots. Do not add raw OOXML fields or a local script runner. If arbitrary generated layout becomes necessary, use a backend implementing `SandboxBackendProtocol` such as `LangSmithSandbox`; `LocalShellBackend` is explicitly unsuitable for untrusted model-generated code.
 
+PPTX has bounded cover, stats, cards, and statement archetypes backed by one
+shared grid module. Archetype models enforce text budgets and never expose
+coordinates. Images use the existing confined decoder and aspect-fill crop;
+every image composition retains a deliberate no-image fallback. Legacy
+title-and-bullet slides remain supported.
+
 **Skills:**
 
 `create_deep_agent(skills=[...])` wires `SkillsMiddleware` itself; do not pass that middleware by hand. Skills are read through the agent's own backend, so `app/backend.py` routes just the `/skills/` prefix to a `FilesystemBackend` via `CompositeBackend` and leaves scratch files ephemeral in `StateBackend`. Pointing the whole backend at disk would also grant the agent recursive `delete` over the repo. `CompositeBackend` strips the matched prefix before delegating, so that backend's `root_dir` is the `skills/` directory itself.

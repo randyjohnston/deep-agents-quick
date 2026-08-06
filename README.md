@@ -50,6 +50,12 @@ For full organization styling, pass `template="acme.xltx"`,
 Templates use the same confined input roots and ZIP size ceilings as Office
 readers. Macro-enabled documents and templates are rejected.
 
+PPTX generation also supports bounded designed slide archetypes: cover, stat
+cards, image cards, and statement slides. New decks default to 16:9, while a
+supplied POTX/PPTX retains its own canvas. Archetype copy has schema-enforced
+character budgets; optional images are guarded and aspect-filled, with a solid
+panel fallback when absent. Legacy title-and-bullet slides remain supported.
+
 ## Switching model providers
 
 The `MODEL` environment variable selects the provider and model. Two providers are pre-configured:
