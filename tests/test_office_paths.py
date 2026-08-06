@@ -337,7 +337,7 @@ def test_pptx_template_reports_layout_without_body_placeholder(_isolate_dirs):
     )
     with ZipFile(template_path) as package:
         layout = package.read("ppt/slideLayouts/slideLayout1.xml")
-    marker = b'<p:ph type="ctrTitle"/>'
+    marker = b'<p:ph type="subTitle" idx="1"/>'
     assert marker in layout
     _replace_member(template_path, "ppt/slideLayouts/slideLayout1.xml", layout.replace(marker, b""))
 

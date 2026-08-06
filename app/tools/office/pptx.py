@@ -93,12 +93,14 @@ def write_pptx(
 
 def _content_layout(presentation, preferred_name: str, fallback_index: int):
     """Select a layout and ensure it has title and body text placeholders."""
-    layout = None
-    for layout in presentation.slide_layouts:
-        if layout.name.casefold() == preferred_name.casefold():
-            break
-    else:
-        layout = None
+    layout = next(
+        (
+            candidate
+            for candidate in presentation.slide_layouts
+            if candidate.name.casefold() == preferred_name.casefold()
+        ),
+        None,
+    )
     if layout is None and len(presentation.slide_layouts) <= fallback_index:
         raise ValueError(f"Presentation template has no usable {preferred_name!r} layout")
     layout = layout or presentation.slide_layouts[fallback_index]
@@ -121,6 +123,12 @@ def _content_layout(presentation, preferred_name: str, fallback_index: int):
             for placeholder in layout.placeholders
             if placeholder.shape_id != title.shape_id
             and getattr(placeholder, "has_text_frame", False)
+            and placeholder.placeholder_format.type
+            not in {
+                PP_PLACEHOLDER.DATE,
+                PP_PLACEHOLDER.FOOTER,
+                PP_PLACEHOLDER.SLIDE_NUMBER,
+            }
         ),
         None,
     )
@@ -133,11 +141,17 @@ def _content_layout(presentation, preferred_name: str, fallback_index: int):
 
 def _placeholder(slide, idx: int):
     """Return the slide placeholder matching a validated layout placeholder."""
-    return next(
-        placeholder
-        for placeholder in slide.placeholders
-        if placeholder.placeholder_format.idx == idx
+    placeholder = next(
+        (
+            candidate
+            for candidate in slide.placeholders
+            if candidate.placeholder_format.idx == idx
+        ),
+        None,
     )
+    if placeholder is None:
+        raise ValueError(f"Presentation template did not clone required placeholder {idx}")
+    return placeholder
 
 
 def _style_slide(slide, theme: ResolvedTheme | None) -> None:
