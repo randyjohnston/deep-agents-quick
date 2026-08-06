@@ -3,9 +3,25 @@
 from __future__ import annotations
 
 from pptx import Presentation
+from pptx.dml.color import RGBColor
+from pptx.util import Inches
 from pydantic import BaseModel, Field
 
-from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
+from app.tools.office.paths import (
+    load_office_file,
+    load_office_template,
+    resolve_read_path,
+    resolve_template_path,
+    resolve_write_path,
+)
+from app.tools.office.theme import ResolvedTheme, Theme, resolve_theme
+
+_POTX_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"
+)
+_PPTX_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
+)
 
 # python-pptx pulls in XlsxWriter for chart workbooks. Spreadsheet generation
 # intentionally remains in xlsx.py with openpyxl so there is one XLSX code path.
@@ -26,24 +42,39 @@ class Deck(BaseModel):
     slides: list[Slide] = Field(default_factory=list)
 
 
-def write_pptx(filename: str, deck: Deck) -> str:
+def write_pptx(
+    filename: str,
+    deck: Deck,
+    theme: Theme | None = None,
+    template: str | None = None,
+) -> str:
     """Create a PowerPoint .pptx file from typed content and return its path.
 
     Args:
         filename: Output basename. The .pptx extension is added when absent.
         deck: Optional title slide followed by titled bullet slides.
+        theme: Bounded inline branding or a named theme reference.
+        template: Optional .potx/.pptx template under OFFICE_INPUT_DIR.
     """
     if not deck.title and not deck.subtitle and not deck.slides:
         raise ValueError("Provide a title, subtitle, or at least one slide.")
     path = resolve_write_path(filename, ".pptx")
     path.parent.mkdir(parents=True, exist_ok=True)
-    presentation = Presentation()
+    template_path = resolve_template_path(template, (".potx", ".pptx")) if template else None
+    presentation = (
+        load_office_template(template_path, Presentation, _POTX_CONTENT_TYPE, _PPTX_CONTENT_TYPE)
+        if template_path
+        else Presentation()
+    )
+    branding = resolve_theme(theme)
     if deck.title or deck.subtitle:
-        slide = presentation.slides.add_slide(presentation.slide_layouts[0])
+        slide = presentation.slides.add_slide(_layout(presentation, "Title Slide", 0))
         slide.shapes.title.text = deck.title or ""
         slide.placeholders[1].text = deck.subtitle or ""
+        _style_slide(slide, branding)
+        _add_logo(slide, presentation, branding)
     for item in deck.slides:
-        slide = presentation.slides.add_slide(presentation.slide_layouts[1])
+        slide = presentation.slides.add_slide(_layout(presentation, "Title and Content", 1))
         slide.shapes.title.text = item.title
         frame = slide.placeholders[1].text_frame
         frame.clear()
@@ -51,8 +82,56 @@ def write_pptx(filename: str, deck: Deck) -> str:
             paragraph = frame.paragraphs[0] if index == 0 else frame.add_paragraph()
             paragraph.text = bullet
             paragraph.level = 0
+        _style_slide(slide, branding)
+        _add_logo(slide, presentation, branding)
     presentation.save(path)
     return f"Wrote {path} — {len(presentation.slides)} slides"
+
+
+def _layout(presentation, preferred_name: str, fallback_index: int):
+    for layout in presentation.slide_layouts:
+        if layout.name.casefold() == preferred_name.casefold():
+            return layout
+    if len(presentation.slide_layouts) <= fallback_index:
+        raise ValueError(f"Presentation template has no usable {preferred_name!r} layout")
+    return presentation.slide_layouts[fallback_index]
+
+
+def _style_slide(slide, theme: ResolvedTheme | None) -> None:
+    if not theme:
+        return
+    title = slide.shapes.title
+    if title:
+        if theme.header_background:
+            title.fill.solid()
+            title.fill.fore_color.rgb = RGBColor.from_string(theme.header_background)
+        _style_text(title.text_frame, theme.heading_font, theme.header_foreground, bold=True)
+    for shape in slide.placeholders:
+        if (title and shape.shape_id == title.shape_id) or not getattr(
+            shape, "has_text_frame", False
+        ):
+            continue
+        _style_text(shape.text_frame, theme.body_font, theme.accent_color)
+
+
+def _style_text(frame, font_name: str | None, color: str | None, bold: bool = False) -> None:
+    for paragraph in frame.paragraphs:
+        for run in paragraph.runs:
+            if font_name:
+                run.font.name = font_name
+            if color:
+                run.font.color.rgb = RGBColor.from_string(color)
+            if bold:
+                run.font.bold = True
+
+
+def _add_logo(slide, presentation, theme: ResolvedTheme | None) -> None:
+    if not theme or not theme.logo:
+        return
+    width = Inches(1)
+    slide.shapes.add_picture(
+        str(theme.logo), presentation.slide_width - width - Inches(0.25), Inches(0.1), width=width
+    )
 
 
 def read_pptx(path: str, max_slides: int = 100) -> str:

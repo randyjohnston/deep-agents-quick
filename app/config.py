@@ -44,3 +44,8 @@ def office_input_dirs() -> list[Path]:
     if (out := office_output_dir()) not in roots:
         roots.append(out)
     return roots
+
+
+def office_theme_dir() -> Path:
+    """Directory containing named JSON or TOML Office themes."""
+    return Path(os.getenv("OFFICE_THEME_DIR", "themes")).expanduser().resolve()

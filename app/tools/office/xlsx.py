@@ -17,11 +17,18 @@ import re
 from datetime import date, datetime, time
 
 from openpyxl import Workbook, load_workbook
+from openpyxl.drawing.image import Image as SpreadsheetImage
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 from pydantic import BaseModel, Field
 
-from app.tools.office.paths import load_office_file, resolve_read_path, resolve_write_path
+from app.tools.office.paths import (
+    load_office_file,
+    resolve_read_path,
+    resolve_template_path,
+    resolve_write_path,
+)
+from app.tools.office.theme import ResolvedTheme, Theme, resolve_theme
 
 CellValue = bool | int | float | str | None
 
@@ -121,6 +128,8 @@ def write_xlsx(
     sheets: list[Sheet],
     freeze_header: bool = True,
     autofilter: bool = True,
+    theme: Theme | None = None,
+    template: str | None = None,
 ) -> str:
     """Write data to a real .xlsx workbook and return its path.
 
@@ -135,6 +144,8 @@ def write_xlsx(
         sheets: One entry per worksheet.
         freeze_header: Keep the header row visible while scrolling.
         autofilter: Add filter dropdowns across the header row.
+        theme: Bounded inline branding or a named theme reference.
+        template: Optional .xltx/.xlsx template under OFFICE_INPUT_DIR.
 
     Returns:
         A summary naming the absolute path and the shape of each sheet written.
@@ -144,9 +155,16 @@ def write_xlsx(
 
     path = resolve_write_path(filename, ".xlsx")
     path.parent.mkdir(parents=True, exist_ok=True)
+    branding = resolve_theme(theme)
 
-    wb = Workbook()
-    wb.remove(wb.active)  # drop the default sheet; we add our own
+    if template:
+        template_path = resolve_template_path(template, (".xltx", ".xlsx"))
+        wb = load_office_file(template_path, load_workbook)
+        wb.template = False
+    else:
+        wb = Workbook()
+    for existing in list(wb.worksheets):
+        wb.remove(existing)
 
     taken: set[str] = set()
     summary: list[str] = []
@@ -165,19 +183,23 @@ def write_xlsx(
             )
 
         ws = wb.create_sheet(_unique_sheet_name(sheet.name, taken))
+        if branding and branding.accent_color:
+            ws.sheet_properties.tabColor = f"FF{branding.accent_color}"
         widths = [0] * width_count
 
         if header:
             for col, title in enumerate(header, start=1):
                 cell = ws.cell(row=1, column=col, value=str(title))
-                cell.font = _HEADER_FONT
-                cell.fill = _HEADER_FILL
+                cell.font = _header_font(branding)
+                cell.fill = _header_fill(branding)
                 widths[col - 1] = len(str(title))
 
         row_offset = 2 if header else 1
         for r, row in enumerate(sheet.rows, start=row_offset):
             for c, value in enumerate(row, start=1):
                 rendered = _set_cell(ws, r, c, value)
+                if branding and branding.body_font:
+                    ws.cell(row=r, column=c).font = Font(name=branding.body_font)
                 widths[c - 1] = max(widths[c - 1], rendered)
 
         for col, width in enumerate(widths, start=1):
@@ -192,10 +214,33 @@ def write_xlsx(
                 last = get_column_letter(width_count)
                 ws.auto_filter.ref = f"A1:{last}{len(sheet.rows) + 1}"
 
+        if branding and branding.logo:
+            logo = SpreadsheetImage(branding.logo)
+            scale = min(160 / logo.width, 80 / logo.height, 1)
+            logo.width *= scale
+            logo.height *= scale
+            ws.add_image(logo, f"{get_column_letter(max(width_count + 2, 2))}1")
+
         summary.append(f"{ws.title} ({len(sheet.rows)} rows x {width_count} cols)")
 
     wb.save(path)
     return f"Wrote {path} — " + "; ".join(summary)
+
+
+def _header_font(theme: ResolvedTheme | None) -> Font:
+    if not theme:
+        return _HEADER_FONT
+    return Font(
+        name=theme.heading_font,
+        bold=True,
+        color=f"FF{theme.header_foreground}" if theme.header_foreground else None,
+    )
+
+
+def _header_fill(theme: ResolvedTheme | None) -> PatternFill:
+    if theme and theme.header_background:
+        return PatternFill("solid", fgColor=f"FF{theme.header_background}")
+    return _HEADER_FILL
 
 
 def read_xlsx(

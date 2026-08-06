@@ -21,6 +21,34 @@ Copy `.env.example` to `.env` and set the following:
 | `MODEL` | No | Model string — see below |
 | `OFFICE_INPUT_DIR` | No | Permitted root for Office files to inspect (default `./input`) |
 | `OFFICE_OUTPUT_DIR` | No | Destination for generated Office files (default `./output`) |
+| `OFFICE_THEME_DIR` | No | Named JSON/TOML themes (default `./themes`) |
+
+## Office themes and templates
+
+All three Office writers accept the same bounded `Theme`: accent, header
+background/foreground colors, heading/body fonts, and an optional PNG/JPEG
+logo. Use inline values for one-offs or reference a named theme stored under
+`OFFICE_THEME_DIR`:
+
+```json
+{
+  "accent_color": "336699",
+  "header_background": "112233",
+  "header_foreground": "FFFFFF",
+  "heading_font": "Aptos Display",
+  "body_font": "Aptos",
+  "logo": "acme-logo.png"
+}
+```
+
+Save that as `themes/acme.json`, then pass `theme={"name": "acme"}`. Explicit
+fields on the same object override named values. Logos resolve only under
+`OFFICE_INPUT_DIR` and are byte- and pixel-bounded before decoding.
+
+For full organization styling, pass `template="acme.xltx"`,
+`template="acme.dotx"`, or `template="acme.potx"` to the matching writer.
+Templates use the same confined input roots and ZIP size ceilings as Office
+readers. Macro-enabled documents and templates are rejected.
 
 ## Switching model providers
 
