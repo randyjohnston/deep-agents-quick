@@ -11,6 +11,11 @@ max_blocks=500)` to inspect supplied documents. Pass typed structure rather
 than markdown: `document` contains `title`, `subtitle`, and `sections`; each
 section contains an optional `heading`, `paragraphs`, and `bullets`.
 
+`write_docx` also accepts `theme={"name": "acme"}` or bounded inline colors,
+fonts, and a logo. Pass `template="acme.dotx"` when the organization's native
+Word styles should be inherited. Themes resolve under `OFFICE_THEME_DIR`;
+logos and templates must be under `OFFICE_INPUT_DIR`.
+
 Choose DOCX for reports, briefs, memos, and other narrative documents intended
 for editing or formal distribution. Prefer Markdown when the user only needs
 chat-readable text, and PPTX when the content is meant to be presented.

@@ -52,6 +52,8 @@ write_xlsx(
             ],
         },
     ],
+    theme={"name": "acme"},
+    template="acme.xltx",
 )
 ```
 
@@ -91,6 +93,11 @@ file. On a deployed server the path is container-local and does not survive a
 restart, so mention that when it applies.
 
 The legacy `XLSX_INPUT_DIR` and `XLSX_OUTPUT_DIR` settings remain fallbacks.
+
+For branding, pass a bounded inline theme or `{"name": "..."}` for a theme
+under `OFFICE_THEME_DIR`. Use an `.xltx` template when workbook-level named
+styles matter. Logos and templates must be under `OFFICE_INPUT_DIR`; macro
+templates are rejected.
 
 ## Limits
 

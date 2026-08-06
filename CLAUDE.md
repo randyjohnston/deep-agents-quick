@@ -29,6 +29,7 @@ app/
     office/
       __init__.py     # OFFICE_TOOLS registry
       paths.py        # shared path confinement and OOXML size checks
+      theme.py        # bounded named/inline branding and logo validation
       xlsx.py         # write_xlsx / read_xlsx
       docx.py         # write_docx / read_docx
       pptx.py         # write_pptx / read_pptx
@@ -59,6 +60,8 @@ XLSX, DOCX, and PPTX files are ZIPs of Office Open XML parts, so they are built 
 
 Office files cannot live in the agent's virtual filesystem either — `StateBackend` stores files as text and base64-encodes binary, producing an unopenable blob. `app/tools/office/` therefore writes to the real filesystem under `OFFICE_OUTPUT_DIR` and reads from `OFFICE_INPUT_DIR` plus the output dir. The older `XLSX_*` variables remain fallbacks.
 
+Each writer accepts a bounded `Theme` plus a guarded native template (`.xltx`, `.dotx`, or `.potx`). Named JSON/TOML themes resolve under `OFFICE_THEME_DIR`; logos and templates remain confined to Office input roots. Do not add raw OOXML fields or a local script runner. If arbitrary generated layout becomes necessary, use a backend implementing `SandboxBackendProtocol` such as `LangSmithSandbox`; `LocalShellBackend` is explicitly unsuitable for untrusted model-generated code.
+
 **Skills:**
 
 `create_deep_agent(skills=[...])` wires `SkillsMiddleware` itself; do not pass that middleware by hand. Skills are read through the agent's own backend, so `app/backend.py` routes just the `/skills/` prefix to a `FilesystemBackend` via `CompositeBackend` and leaves scratch files ephemeral in `StateBackend`. Pointing the whole backend at disk would also grant the agent recursive `delete` over the repo. `CompositeBackend` strips the matched prefix before delegating, so that backend's `root_dir` is the `skills/` directory itself.
@@ -81,6 +84,7 @@ Set `MODEL` in `.env` to switch providers:
 | `OLLAMA_BASE_URL` | No | Defaults to `http://localhost:11434` |
 | `OFFICE_OUTPUT_DIR` | No | Where Office writers save; defaults to `./output` |
 | `OFFICE_INPUT_DIR` | No | Where Office readers look; defaults to `./input` |
+| `OFFICE_THEME_DIR` | No | Where named JSON/TOML themes live; defaults to `./themes` |
 | `XLSX_OUTPUT_DIR` | No | Legacy fallback for `OFFICE_OUTPUT_DIR` |
 | `XLSX_INPUT_DIR` | No | Legacy fallback for `OFFICE_INPUT_DIR` |
 | `LANGCHAIN_TRACING_V2` | No | Set to `true` to enable LangSmith tracing |
