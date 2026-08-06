@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import PP_PLACEHOLDER
 from pptx.util import Inches
 from pydantic import BaseModel, Field
 
@@ -68,15 +69,17 @@ def write_pptx(
     )
     branding = resolve_theme(theme)
     if deck.title or deck.subtitle:
-        slide = presentation.slides.add_slide(_layout(presentation, "Title Slide", 0))
+        layout, body_idx = _content_layout(presentation, "Title Slide", 0)
+        slide = presentation.slides.add_slide(layout)
         slide.shapes.title.text = deck.title or ""
-        slide.placeholders[1].text = deck.subtitle or ""
+        _placeholder(slide, body_idx).text = deck.subtitle or ""
         _style_slide(slide, branding)
         _add_logo(slide, presentation, branding)
     for item in deck.slides:
-        slide = presentation.slides.add_slide(_layout(presentation, "Title and Content", 1))
+        layout, body_idx = _content_layout(presentation, "Title and Content", 1)
+        slide = presentation.slides.add_slide(layout)
         slide.shapes.title.text = item.title
-        frame = slide.placeholders[1].text_frame
+        frame = _placeholder(slide, body_idx).text_frame
         frame.clear()
         for index, bullet in enumerate(item.bullets):
             paragraph = frame.paragraphs[0] if index == 0 else frame.add_paragraph()
@@ -88,13 +91,53 @@ def write_pptx(
     return f"Wrote {path} — {len(presentation.slides)} slides"
 
 
-def _layout(presentation, preferred_name: str, fallback_index: int):
+def _content_layout(presentation, preferred_name: str, fallback_index: int):
+    """Select a layout and ensure it has title and body text placeholders."""
+    layout = None
     for layout in presentation.slide_layouts:
         if layout.name.casefold() == preferred_name.casefold():
-            return layout
-    if len(presentation.slide_layouts) <= fallback_index:
+            break
+    else:
+        layout = None
+    if layout is None and len(presentation.slide_layouts) <= fallback_index:
         raise ValueError(f"Presentation template has no usable {preferred_name!r} layout")
-    return presentation.slide_layouts[fallback_index]
+    layout = layout or presentation.slide_layouts[fallback_index]
+    title = next(
+        (
+            placeholder
+            for placeholder in layout.placeholders
+            if placeholder.placeholder_format.type
+            in {PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE}
+        ),
+        None,
+    )
+    if title is None:
+        raise ValueError(
+            f"Presentation template layout {layout.name!r} must contain title and body placeholders"
+        )
+    body = next(
+        (
+            placeholder
+            for placeholder in layout.placeholders
+            if placeholder.shape_id != title.shape_id
+            and getattr(placeholder, "has_text_frame", False)
+        ),
+        None,
+    )
+    if body is None:
+        raise ValueError(
+            f"Presentation template layout {layout.name!r} must contain title and body placeholders"
+        )
+    return layout, body.placeholder_format.idx
+
+
+def _placeholder(slide, idx: int):
+    """Return the slide placeholder matching a validated layout placeholder."""
+    return next(
+        placeholder
+        for placeholder in slide.placeholders
+        if placeholder.placeholder_format.idx == idx
+    )
 
 
 def _style_slide(slide, theme: ResolvedTheme | None) -> None:

@@ -71,15 +71,19 @@ def write_docx(
     if branding and branding.logo:
         output.add_picture(str(branding.logo), width=Inches(1.5))
     if document.title:
+        _require_style(output, "Title")
         output.add_heading(document.title, level=0)
     if document.subtitle:
+        _require_style(output, "Subtitle")
         output.add_paragraph(document.subtitle, style="Subtitle")
     for section in document.sections:
         if section.heading:
+            _require_style(output, "Heading 1")
             output.add_heading(section.heading, level=1)
         for paragraph in section.paragraphs:
             output.add_paragraph(paragraph)
         for bullet in section.bullets:
+            _require_style(output, "List Bullet")
             output.add_paragraph(bullet, style="List Bullet")
     output.save(path)
     return f"Wrote {path} — {len(document.sections)} sections"
@@ -88,11 +92,11 @@ def write_docx(
 def _apply_theme(output, theme: ResolvedTheme | None) -> None:
     if not theme:
         return
-    normal = output.styles["Normal"]
+    normal = _require_style(output, "Normal")
     if theme.body_font:
         normal.font.name = theme.body_font
     for name in ("Title", "Heading 1"):
-        style = output.styles[name]
+        style = _require_style(output, name)
         if theme.heading_font:
             style.font.name = theme.heading_font
         if theme.header_background:
@@ -102,6 +106,14 @@ def _apply_theme(output, theme: ResolvedTheme | None) -> None:
         color = theme.header_foreground or theme.accent_color
         if color:
             style.font.color.rgb = RGBColor.from_string(color)
+
+
+def _require_style(output, name: str):
+    """Return a required Word style with an actionable template error."""
+    try:
+        return output.styles[name]
+    except KeyError as exc:
+        raise ValueError(f"Word template is missing required style {name!r}") from exc
 
 
 def read_docx(path: str, max_blocks: int = 500) -> str:

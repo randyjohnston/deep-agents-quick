@@ -158,6 +158,12 @@ def test_named_theme_resolves_with_inline_overrides(_isolate_dirs):
     assert resolved.body_font == "Aptos"
 
 
+def test_named_theme_ignores_explicit_null_overrides(_isolate_dirs):
+    (_isolate_dirs / "themes" / "acme.json").write_text('{"accent_color":"112233"}')
+
+    assert resolve_theme(Theme(name="acme", accent_color=None)).accent_color == "112233"
+
+
 def test_named_toml_theme_resolves(_isolate_dirs):
     (_isolate_dirs / "themes" / "acme.toml").write_text('heading_font = "Arial"')
     assert resolve_theme(Theme(name="acme")).heading_font == "Arial"
@@ -199,8 +205,16 @@ def test_logo_is_confined_and_pixel_bounded(_isolate_dirs, monkeypatch):
     monkeypatch.setattr(paths, "MAX_IMAGE_PIXELS", 3)
     with pytest.raises(ValueError, match="and 3 pixels"):
         resolve_theme(Theme(logo="logo.png"))
-    with pytest.raises(FileNotFoundError, match="permitted Office asset"):
+    with pytest.raises(FileNotFoundError, match="No Office file found"):
         resolve_theme(Theme(logo=str(_isolate_dirs / "outside.png")))
+
+
+def test_logo_rejects_renamed_unsupported_image(_isolate_dirs):
+    logo = _isolate_dirs / "in" / "logo.png"
+    Image.new("RGB", (2, 2), "red").save(logo, format="GIF")
+
+    with pytest.raises(ValueError, match="Not a valid PNG or JPEG"):
+        resolve_theme(Theme(logo="logo.png"))
 
 
 @pytest.mark.parametrize("writer,extension", WRITER_CASES)
@@ -273,6 +287,25 @@ def test_docx_template_preserves_styles(_isolate_dirs):
         assert b"wordprocessingml.document.main+xml" in package.read("[Content_Types].xml")
 
 
+def test_docx_template_reports_missing_required_style(_isolate_dirs):
+    template_path = _isolate_dirs / "in" / "trimmed.dotx"
+    DocxDocument().save(template_path)
+    _replace_bytes_in_member(
+        template_path,
+        "[Content_Types].xml",
+        b"wordprocessingml.document.main+xml",
+        b"wordprocessingml.template.main+xml",
+    )
+    with ZipFile(template_path) as package:
+        styles = package.read("word/styles.xml")
+    start = styles.index(b'<w:style w:type="paragraph" w:styleId="Title">')
+    end = styles.index(b"</w:style>", start) + len(b"</w:style>")
+    _replace_member(template_path, "word/styles.xml", styles[:start] + styles[end:])
+
+    with pytest.raises(ValueError, match="missing required style 'Title'"):
+        _write_docx("from-trimmed-template", template="trimmed.dotx")
+
+
 def test_pptx_template_preserves_page_size(_isolate_dirs):
     template = Presentation()
     template.slide_width = Inches(12)
@@ -291,6 +324,25 @@ def test_pptx_template_preserves_page_size(_isolate_dirs):
     assert output.slide_width == Inches(12)
     with ZipFile(output_path) as package:
         assert b"presentationml.presentation.main+xml" in package.read("[Content_Types].xml")
+
+
+def test_pptx_template_reports_layout_without_body_placeholder(_isolate_dirs):
+    template_path = _isolate_dirs / "in" / "trimmed.potx"
+    Presentation().save(template_path)
+    _replace_bytes_in_member(
+        template_path,
+        "[Content_Types].xml",
+        b"presentationml.presentation.main+xml",
+        b"presentationml.template.main+xml",
+    )
+    with ZipFile(template_path) as package:
+        layout = package.read("ppt/slideLayouts/slideLayout1.xml")
+    marker = b'<p:ph type="ctrTitle"/>'
+    assert marker in layout
+    _replace_member(template_path, "ppt/slideLayouts/slideLayout1.xml", layout.replace(marker, b""))
+
+    with pytest.raises(ValueError, match="must contain title and body placeholders"):
+        _write_pptx("from-trimmed-template", template="trimmed.potx")
 
 
 @pytest.mark.parametrize(

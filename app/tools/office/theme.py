@@ -70,7 +70,8 @@ def resolve_theme(theme: Theme | None) -> ResolvedTheme | None:
     if theme.name:
         values.update(_load_named_theme(theme.name).model_dump(exclude_none=True, exclude={"name"}))
     for field in theme.model_fields_set - {"name"}:
-        values[field] = getattr(theme, field)
+        if (value := getattr(theme, field)) is not None:
+            values[field] = value
     if logo := values.get("logo"):
         values["logo"] = resolve_image_path(str(logo))
     return ResolvedTheme.model_validate(values)

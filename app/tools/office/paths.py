@@ -45,6 +45,16 @@ def resolve_write_path(filename: str, extension: str) -> Path:
 
 def resolve_read_path(path_or_name: str, extensions: tuple[str, ...]) -> Path:
     """Resolve inside permitted roots, verify the type, then inspect ZIP sizes."""
+    path = _resolve_permitted_file(path_or_name)
+    if path.suffix.lower() not in extensions:
+        allowed = ", ".join(extensions)
+        raise ValueError(f"Expected one of {allowed}; got {path.name!r}")
+    validate_archive_size(path)
+    return path
+
+
+def _resolve_permitted_file(path_or_name: str) -> Path:
+    """Resolve an existing file under one of the shared Office input roots."""
     candidate = Path(path_or_name).expanduser()
     roots = office_input_dirs()
     tried: list[Path] = []
@@ -67,10 +77,6 @@ def resolve_read_path(path_or_name: str, extensions: tuple[str, ...]) -> Path:
     if path is None:
         searched = ", ".join(str(item) for item in tried) or ", ".join(map(str, roots))
         raise FileNotFoundError(f"No Office file found for {path_or_name!r}. Looked in: {searched}")
-    if path.suffix.lower() not in extensions:
-        allowed = ", ".join(extensions)
-        raise ValueError(f"Expected one of {allowed}; got {path.name!r}")
-    validate_archive_size(path)
     return path
 
 
@@ -112,6 +118,8 @@ def resolve_image_path(path_or_name: str) -> Path:
         )
     try:
         with Image.open(path) as image:
+            if image.format not in {"PNG", "JPEG"}:
+                raise ValueError(f"Not a valid PNG or JPEG image: {path.name!r}")
             width, height = image.size
             if (
                 width <= 0
@@ -127,22 +135,6 @@ def resolve_image_path(path_or_name: str) -> Path:
     except (UnidentifiedImageError, OSError) as exc:
         raise ValueError(f"Not a valid PNG or JPEG image: {path.name!r}") from exc
     return path
-
-
-def _resolve_permitted_file(path_or_name: str) -> Path:
-    """Resolve an existing file under one of the shared Office input roots."""
-    candidate = Path(path_or_name).expanduser()
-    roots = office_input_dirs()
-    if candidate.is_absolute():
-        resolved = candidate.resolve()
-        if any(resolved.is_relative_to(root) for root in roots) and resolved.is_file():
-            return resolved
-    else:
-        for root in roots:
-            resolved = (root / candidate).resolve()
-            if resolved.is_relative_to(root) and resolved.is_file():
-                return resolved
-    raise FileNotFoundError(f"No permitted Office asset found for {path_or_name!r}")
 
 
 def validate_archive_size(path: Path) -> None:
